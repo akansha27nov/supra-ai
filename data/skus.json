@@ -1,0 +1,118 @@
+[
+  {
+    "sku": "SKU-ELEC-9000",
+    "product_name": "Over-Ear Wireless Headphones",
+    "category": "Consumer Electronics",
+    "target_market": "EU",
+    "mandatory_standards": [
+      "RED Directive 2014/53/EU (Radio Equipment)",
+      "RoHS Directive 2011/65/EU & (EU) 2015/863",
+      "EN 62368-1:2020 (Audio/Video & IT Equipment Safety)"
+    ],
+    "max_lead_concentration_ppm": 1000,
+    "dpp_required": true
+  },
+  {
+    "sku": "SKU-ELEC-8812",
+    "product_name": "Smart Ambient LED Desk Lamp",
+    "category": "Consumer Electronics",
+    "target_market": "EU / DACH",
+    "mandatory_standards": [
+      "CE Directive 2014/30/EU (EMC)",
+      "RoHS Directive 2011/65/EU & (EU) 2015/863",
+      "EN 62368-1:2020 (Audio/Video & IT Equipment Safety)"
+    ],
+    "max_lead_concentration_ppm": 1000,
+    "dpp_required": true
+  },
+  {
+    "sku": "SKU-ELEC-9007",
+    "product_name": "65W Fast USB-C Wall Charger",
+    "category": "Consumer Electronics",
+    "target_market": "EU",
+    "mandatory_standards": [
+      "CE Directive 2014/35/EU (Low Voltage Directive)",
+      "CE Directive 2014/30/EU (EMC)",
+      "RoHS Directive 2011/65/EU"
+    ],
+    "max_lead_concentration_ppm": 1000,
+    "dpp_required": true
+  },
+  {
+    "sku": "SKU-ELEC-9001",
+    "product_name": "Pro ANC Wireless Earbuds",
+    "category": "Consumer Electronics",
+    "target_market": "EU",
+    "mandatory_standards": [
+      "RED Directive 2014/53/EU (Radio Equipment)",
+      "RoHS Directive 2011/65/EU",
+      "EN 62368-1:2020 (Safety Standard)"
+    ],
+    "max_lead_concentration_ppm": 1000,
+    "dpp_required": true
+  },
+  {
+    "sku": "SKU-ELEC-9002",
+    "product_name": "Fitness Tracker Smartwatch V2",
+    "category": "Consumer Electronics",
+    "target_market": "EU",
+    "mandatory_standards": [
+      "RED Directive 2014/53/EU (Radio Equipment)",
+      "CE Directive 2014/30/EU (EMC)",
+      "RoHS Directive 2011/65/EU"
+    ],
+    "max_lead_concentration_ppm": 1000,
+    "dpp_required": true
+  },
+  {
+    "sku": "SKU-ELEC-9003",
+    "product_name": "Fast-Charge Power Bank 20000mAh",
+    "category": "Consumer Electronics",
+    "target_market": "EU",
+    "mandatory_standards": [
+      "CE Directive 2014/30/EU (EMC)",
+      "RoHS Directive 2011/65/EU",
+      "EN 62133-2:2017 (Battery Safety Standard)"
+    ],
+    "max_lead_concentration_ppm": 1000,
+    "dpp_required": true
+  },
+  {
+    "sku": "SKU-ELEC-9004",
+    "product_name": "Ergonomic 27-Inch 4K USB-C Monitor",
+    "category": "Consumer Electronics",
+    "target_market": "EU / DACH",
+    "mandatory_standards": [
+      "CE Directive 2014/35/EU (Low Voltage Directive)",
+      "CE Directive 2014/30/EU (EMC)",
+      "RoHS Directive 2011/65/EU"
+    ],
+    "max_lead_concentration_ppm": 1000,
+    "dpp_required": true
+  },
+  {
+    "sku": "SKU-ELEC-9005",
+    "product_name": "7-in-1 Aluminum USB-C Hub",
+    "category": "Consumer Electronics",
+    "target_market": "EU",
+    "mandatory_standards": [
+      "CE Directive 2014/30/EU (EMC)",
+      "RoHS Directive 2011/65/EU"
+    ],
+    "max_lead_concentration_ppm": 1000,
+    "dpp_required": false
+  },
+  {
+    "sku": "SKU-ELEC-9006",
+    "product_name": "Smart Home Voice Assistant Speaker",
+    "category": "Consumer Electronics",
+    "target_market": "EU",
+    "mandatory_standards": [
+      "RED Directive 2014/53/EU (Radio Equipment)",
+      "RoHS Directive 2011/65/EU",
+      "ErP Directive 2009/125/EC (Ecodesign)"
+    ],
+    "max_lead_concentration_ppm": 1000,
+    "dpp_required": true
+  }
+]

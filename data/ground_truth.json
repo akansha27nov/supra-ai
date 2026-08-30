@@ -1,0 +1,178 @@
+[
+  {
+    "file_name": "cert_02_expired_elec.pdf",
+    "associated_sku": "SKU-ELEC-8812",
+    "expected_extraction": {
+      "document_type": "RoHS & CE Test Report",
+      "certificate_id": "ROHS-CN-2022-10492",
+      "supplier_name": "Shenzhen Shentech Electronics Co., Ltd.",
+      "issuing_lab": "SGS-CSTC Standards Technical Services Co., Ltd.",
+      "lab_accreditation_id": "CNAS-L0641",
+      "issue_date": "2022-01-10",
+      "expiration_date": "2025-01-09",
+      "standards_found": [
+        "CE Directive 2014/30/EU",
+        "RoHS Directive 2011/65/EU"
+      ],
+      "tested_lead_ppm": 450
+    },
+    "expected_audit_result": {
+      "status": "REJECTED",
+      "screening_priority_score": 90,
+      "flagged_issues": [
+        "CRITICAL: Certificate expired on 2025-01-09",
+        "WARNING: Missing mandatory standard EN 62368-1:2020"
+      ]
+    }
+  },
+  {
+    "file_name": "cert_04_valid_wireless_earbuds.pdf",
+    "associated_sku": "SKU-ELEC-9001",
+    "expected_extraction": {
+      "document_type": "CE RED & RoHS Compliance Certificate",
+      "certificate_id": "RED-EU-2026-88102",
+      "supplier_name": "AudioTech Solutions HK Ltd.",
+      "issuing_lab": "DEKRA Testing and Certification GmbH",
+      "lab_accreditation_id": "DAT-P-029/97-01",
+      "issue_date": "2026-01-15",
+      "expiration_date": "2029-01-14",
+      "standards_found": [
+        "RED Directive 2014/53/EU",
+        "RoHS Directive 2011/65/EU",
+        "EN 62368-1:2020"
+      ],
+      "tested_lead_ppm": 320
+    },
+    "expected_audit_result": {
+      "status": "PASS",
+      "screening_priority_score": 10,
+      "flagged_issues": []
+    }
+  },
+  {
+    "file_name": "cert_05_missing_red_smartwatch.pdf",
+    "associated_sku": "SKU-ELEC-9002",
+    "expected_extraction": {
+      "document_type": "EMC & RoHS Compliance Report",
+      "certificate_id": "CE-CN-2025-55109",
+      "supplier_name": "Guangzhou Wearable Tech Co., Ltd.",
+      "issuing_lab": "Eurofins Product Testing",
+      "lab_accreditation_id": "DAKKS-D-PL-14031-01-00",
+      "issue_date": "2025-09-01",
+      "expiration_date": "2028-08-31",
+      "standards_found": [
+        "CE Directive 2014/30/EU",
+        "RoHS Directive 2011/65/EU"
+      ],
+      "tested_lead_ppm": 510
+    },
+    "expected_audit_result": {
+      "status": "FLAGGED",
+      "screening_priority_score": 75,
+      "flagged_issues": [
+        "CRITICAL: Missing mandatory RED Directive 2014/53/EU for wireless devices"
+      ]
+    }
+  },
+  {
+    "file_name": "cert_06_excess_lead_powerbank.pdf",
+    "associated_sku": "SKU-ELEC-9003",
+    "expected_extraction": {
+      "document_type": "RoHS Chemical Analysis Test Report",
+      "certificate_id": "ROHS-FAIL-2026-901",
+      "supplier_name": "PowerMax Energy Ltd.",
+      "issuing_lab": "Intertek Testing Services China",
+      "lab_accreditation_id": "CNAS-L0182",
+      "issue_date": "2026-03-10",
+      "expiration_date": "2028-03-09",
+      "standards_found": [
+        "CE Directive 2014/30/EU",
+        "RoHS Directive 2011/65/EU"
+      ],
+      "tested_lead_ppm": 1450
+    },
+    "expected_audit_result": {
+      "status": "REJECTED",
+      "screening_priority_score": 95,
+      "flagged_issues": [
+        "VIOLATION: Tested lead concentration (1450 ppm) exceeds RoHS maximum threshold (1000 ppm)",
+        "WARNING: Missing mandatory EN 62133-2:2017 battery safety standard"
+      ]
+    }
+  },
+  {
+    "file_name": "cert_07_suspicious_lab_monitor.pdf",
+    "associated_sku": "SKU-ELEC-9004",
+    "expected_extraction": {
+      "document_type": "International Certificate of Quality",
+      "certificate_id": "CERT-FAKE-99042",
+      "supplier_name": "Apex Display Systems Inc.",
+      "issuing_lab": "Global Fast Certs Ltd (Unrecognized)",
+      "lab_accreditation_id": "FAKE-ACC-000",
+      "issue_date": "2026-05-01",
+      "expiration_date": "2029-05-01",
+      "standards_found": [
+        "CE Directive 2014/35/EU",
+        "CE Directive 2014/30/EU",
+        "RoHS Directive 2011/65/EU"
+      ],
+      "tested_lead_ppm": 210
+    },
+    "expected_audit_result": {
+      "status": "REJECTED",
+      "screening_priority_score": 85,
+      "flagged_issues": [
+        "CRITICAL: Unrecognized or suspicious laboratory accreditation ID (FAKE-ACC-000)"
+      ]
+    }
+  },
+  {
+    "file_name": "cert_08_expiring_soon_usb_hub.pdf",
+    "associated_sku": "SKU-ELEC-9005",
+    "expected_extraction": {
+      "document_type": "CE EMC & RoHS Declaration",
+      "certificate_id": "CE-EU-2023-11029",
+      "supplier_name": "Dongguan Peripheral Cables Co.",
+      "issuing_lab": "Bureau Veritas Consumer Products",
+      "lab_accreditation_id": "DAKKS-D-PL-12003-01-00",
+      "issue_date": "2023-09-15",
+      "expiration_date": "2026-09-15",
+      "standards_found": [
+        "CE Directive 2014/30/EU",
+        "RoHS Directive 2011/65/EU"
+      ],
+      "tested_lead_ppm": 390
+    },
+    "expected_audit_result": {
+      "status": "FLAGGED",
+      "screening_priority_score": 60,
+      "flagged_issues": [
+        "WARNING: Certificate expires within 30 days (2026-09-15)"
+      ]
+    }
+  },
+  {
+    "file_name": "cert_09_valid_smart_speaker.pdf",
+    "associated_sku": "SKU-ELEC-9006",
+    "expected_extraction": {
+      "document_type": "EU Declaration of Conformity (RED & ErP)",
+      "certificate_id": "RED-DE-2026-00418",
+      "supplier_name": "SoundHome Audio GmbH",
+      "issuing_lab": "TUV SUD Product Service GmbH",
+      "lab_accreditation_id": "DAT-P-022/95-00",
+      "issue_date": "2026-04-10",
+      "expiration_date": "2029-04-09",
+      "standards_found": [
+        "RED Directive 2014/53/EU",
+        "RoHS Directive 2011/65/EU",
+        "ErP Directive 2009/125/EC"
+      ],
+      "tested_lead_ppm": 180
+    },
+    "expected_audit_result": {
+      "status": "PASS",
+      "screening_priority_score": 10,
+      "flagged_issues": []
+    }
+  }
+]

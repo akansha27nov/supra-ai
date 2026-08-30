@@ -1,0 +1,8 @@
+file_name,certificate_id,supplier_name,associated_sku,audit_status,screening_priority_score,tested_lead_ppm,flagged_issues_detail
+cert_02_expired_elec.pdf,ROHS-CN-2022-10492,"Shenzhen Shentech Electronics Co., Ltd.",SKU-ELEC-8812,REJECTED,90,450,CRITICAL: Certificate expired on 2025-01-09; WARNING: Missing mandatory standard RoHS Directive 2011/65/EU &; WARNING: Missing mandatory standard EN 62368-1:2020
+cert_04_valid_wireless_earbuds.pdf,RED-EU-2026-88102,AudioTech Solutions HK Ltd.,SKU-ELEC-9001,PASS,10,320,
+cert_05_missing_red_smartwatch.pdf,CE-CN-2025-55109,"Guangzhou Wearable Tech Co., Ltd.",SKU-ELEC-9002,FLAGGED,75,510,CRITICAL: Missing mandatory RED Directive 2014/53/EU for wireless devices
+cert_06_excess_lead_powerbank.pdf,ROHS-FAIL-2026-901,PowerMax Energy Ltd.,SKU-ELEC-9003,REJECTED,95,1450,WARNING: Missing mandatory standard EN 62133-2:2017; VIOLATION: Tested lead concentration (1450 ppm) exceeds RoHS maximum threshold (1000 ppm)
+cert_07_suspicious_lab_monitor.pdf,CERT-FAKE-99042,Apex Display Systems Inc.,SKU-ELEC-9004,REJECTED,85,210,CRITICAL: Unrecognized or suspicious laboratory accreditation ID (FAKE-ACC-000)
+cert_08_expiring_soon_usb_hub.pdf,CE-EU-2023-11029,Dongguan Peripheral Cables Co.,SKU-ELEC-9005,FLAGGED,60,390,WARNING: Certificate expires within 30 days (2026-09-15)
+cert_09_valid_smart_speaker.pdf,RED-DE-2026-00418,SoundHome Audio GmbH,SKU-ELEC-9006,PASS,10,180,
