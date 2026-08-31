@@ -67,5 +67,5 @@ This runs the real extraction + rule-based screening pipeline against all 7 real
 
 - **Dashboard**: open `dashboard/Supra AI Compliance Auditor.twbx` in Tableau (Desktop or Public), connected to `data/tableau_export.csv`. See `dashboard_documentation.md` for what each view shows.
 - **n8n workflow**: import `n8n/Supra AI - PDF-Only Compliance Document Auditor.json` into n8n. See `workflow_documentation.md` for the architecture, what was fixed during testing, and current limitations.
-- **Research pack**: `research/` covers sector context (with real, sourced statistics from McKinsey's 2026 State of AI report and Stanford HAI's AI Index, both teacher-provided sources), opportunity/risk mapping, and the three use cases this project is built around.
+- **Research pack**: `research/` covers sector context (with real, sourced statistics from McKinsey's 2026 State of AI report and Stanford HAI's AI Index), opportunity/risk mapping, and the three use cases this project is built around.
 - **Cost/timeline**: `cost_estimation/` covers real measured AI inference cost (~$0.0004/certificate), a stated volume assumption, illustrative build cost, and a phased 4-week pilot timeline.

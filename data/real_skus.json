@@ -1,0 +1,37 @@
+[
+  {
+    "sku": "SKU-PWR-AM1-240",
+    "name": "Enphase Microinverter / Envoy",
+    "category": "Solar / Inverters",
+    "max_lead_concentration_ppm": 1000,
+    "mandatory_standards": ["Directive 2011/65/EU"]
+  },
+  {
+    "sku": "SKU-DRV-ACH480",
+    "name": "ABB ACH480 Frequency Converter",
+    "category": "Drives",
+    "max_lead_concentration_ppm": 1000,
+    "mandatory_standards": ["Directive 2011/65/EU"]
+  },
+  {
+    "sku": "SKU-ACT-CON-REV2",
+    "name": "Concens Electric Actuator",
+    "category": "Actuators",
+    "max_lead_concentration_ppm": 1000,
+    "mandatory_standards": ["Directive 2011/65/EU"]
+  },
+  {
+    "sku": "SKU-SEN-APO-PROP",
+    "name": "Apogee Environmental Sensor",
+    "category": "Sensors",
+    "max_lead_concentration_ppm": 1000,
+    "mandatory_standards": ["Directive 2011/65/EU"]
+  },
+  {
+    "sku": "SKU-IOT-DLT-UNO",
+    "name": "UNOnext Indoor Air Quality Monitor",
+    "category": "IoT",
+    "max_lead_concentration_ppm": 1000,
+    "mandatory_standards": ["Directive 2011/65/EU"]
+  }
+]

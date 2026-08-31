@@ -1,0 +1,6 @@
+dataset_type,file_name,certificate_id,supplier_name,associated_sku,audit_status,screening_priority_score,tested_lead_ppm,flagged_issues_detail
+Real-World,03- RoHS DoC V2023012303 Envoys.pdf,V2023012303,"Enphase Energy, Inc.",SKU-PWR-AM1-240,FLAGGED,55,1000,WARNING: Missing certificate issue date
+Real-World,ACH480_RoHS_DoC.pdf,3AXD10000746646,ABB Oy,SKU-DRV-ACH480,FLAGGED,75,,CRITICAL: Missing mandatory Directive 2011/65/EU; WARNING: Document issue date is older than 2 years baseline
+Real-World,RoHS-Certificate-of-Compliance-Concens-Declaration-of-Conformity-Rev.2-20200120.pdf,,Concens A/S,SKU-ACT-CON-REV2,FLAGGED,65,1000,WARNING: Document issue date is older than 2 years baseline
+Real-World,RoHS_REACH_PROP65_Declaration_of_Conformity.pdf,,"Apogee Instruments, Inc.",SKU-SEN-APO-PROP,PASS,10,,
+Real-World,UNOnext_CE_ROHS_Delta.pdf,,"Delta Electronics, Inc.",SKU-IOT-DLT-UNO,PASS,10,1000,

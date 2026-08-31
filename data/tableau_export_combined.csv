@@ -6,3 +6,8 @@ Synthetic,cert_06_excess_lead_powerbank.pdf,ROHS-FAIL-2026-901,PowerMax Energy L
 Synthetic,cert_07_suspicious_lab_monitor.pdf,CERT-FAKE-99042,Apex Display Systems Inc.,SKU-ELEC-9004,REJECTED,85,210,CRITICAL: Unrecognized or suspicious lab accreditation ID 'FAKE-ACC-000'
 Synthetic,cert_08_expiring_soon_usb_hub.pdf,CE-EU-2023-11029,Dongguan Peripheral Cables Co.,SKU-ELEC-9005,FLAGGED,60,390,WARNING: Certificate expires within 30 days (2026-09-15)
 Synthetic,cert_09_valid_smart_speaker.pdf,RED-DE-2026-00418,SoundHome Audio GmbH,SKU-ELEC-9006,PASS,10,180,
+Real-World,03- RoHS DoC V2023012303 Envoys.pdf,V2023012303,"Enphase Energy, Inc.",SKU-PWR-AM1-240,FLAGGED,55,1000,WARNING: Missing certificate issue date
+Real-World,ACH480_RoHS_DoC.pdf,3AXD10000746646,ABB Oy,SKU-DRV-ACH480,FLAGGED,75,,CRITICAL: Missing mandatory Directive 2011/65/EU; WARNING: Document issue date is older than 2 years baseline
+Real-World,RoHS-Certificate-of-Compliance-Concens-Declaration-of-Conformity-Rev.2-20200120.pdf,,Concens A/S,SKU-ACT-CON-REV2,FLAGGED,65,1000,WARNING: Document issue date is older than 2 years baseline
+Real-World,RoHS_REACH_PROP65_Declaration_of_Conformity.pdf,,"Apogee Instruments, Inc.",SKU-SEN-APO-PROP,PASS,10,,
+Real-World,UNOnext_CE_ROHS_Delta.pdf,,"Delta Electronics, Inc.",SKU-IOT-DLT-UNO,PASS,10,1000,

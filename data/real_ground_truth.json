@@ -1,0 +1,120 @@
+[
+  {
+    "file_name": "03- RoHS DoC V2023012303 Envoys.pdf",
+    "associated_sku": "SKU-PWR-AM1-240",
+    "expected_extraction": {
+      "document_classification": "DECLARATION_OF_CONFORMITY",
+      "certificate_id": "V2023012303",
+      "supplier_name": "Enphase Energy, Inc.",
+      "issue_date": null,
+      "covered_part_numbers": [
+        "ENV-IQ-AM1-240",
+        "ENV-S-AM1-230-60",
+        "ENV-S-AB-120-A",
+        "ENV-S-WB-230"
+      ],
+      "chemical_data": {
+        "tested_lead_ppm": null,
+        "is_statutory_limit": true
+      }
+    },
+    "expected_audit_result": {
+      "status": "FLAGGED",
+      "screening_priority_score": 55,
+      "flagged_issues": [
+        "WARNING: Missing certificate issue date"
+      ]
+    }
+  },
+  {
+    "file_name": "ACH480_RoHS_DoC.pdf",
+    "associated_sku": "SKU-DRV-ACH480",
+    "expected_extraction": {
+      "document_classification": "DECLARATION_OF_CONFORMITY",
+      "certificate_id": "3AXD10000746646",
+      "supplier_name": "ABB Oy",
+      "issue_date": "2021-10-08",
+      "covered_part_numbers": [
+        "ACH480-04"
+      ],
+      "chemical_data": {
+        "tested_lead_ppm": null,
+        "is_statutory_limit": true
+      }
+    },
+    "expected_audit_result": {
+      "status": "FLAGGED",
+      "screening_priority_score": 75,
+      "flagged_issues": [
+        "WARNING: Document issue date is older than 2 years baseline"
+      ]
+    }
+  },
+  {
+    "file_name": "RoHS-Certificate-of-Compliance-Concens-Declaration-of-Conformity-Rev.2-20200120.pdf",
+    "associated_sku": "SKU-ACT-CON-REV2",
+    "expected_extraction": {
+      "document_classification": "DECLARATION_OF_CONFORMITY",
+      "certificate_id": null,
+      "supplier_name": "Concens A/S",
+      "issue_date": "2020-01-01",
+      "covered_part_numbers": [],
+      "chemical_data": {
+        "tested_lead_ppm": null,
+        "is_statutory_limit": true
+      }
+    },
+    "expected_audit_result": {
+      "status": "FLAGGED",
+      "screening_priority_score": 65,
+      "flagged_issues": [
+        "WARNING: Document issue date is older than 2 years baseline",
+        "WARNING: No covered part numbers extracted"
+      ]
+    }
+  },
+  {
+    "file_name": "RoHS_REACH_PROP65_Declaration_of_Conformity.pdf",
+    "associated_sku": "SKU-SEN-APO-PROP",
+    "expected_extraction": {
+      "document_classification": "DECLARATION_OF_CONFORMITY",
+      "certificate_id": null,
+      "supplier_name": "Apogee Instruments, Inc.",
+      "issue_date": "2025-06-01",
+      "covered_part_numbers": ["APOGEE-GENERIC-SERIES"],
+      "chemical_data": {
+        "tested_lead_ppm": null,
+        "is_statutory_limit": true
+      }
+    },
+    "expected_audit_result": {
+      "status": "PASS",
+      "screening_priority_score": 10,
+      "flagged_issues": []
+    }
+  },
+  {
+    "file_name": "UNOnext_CE_ROHS_Delta.pdf",
+    "associated_sku": "SKU-IOT-DLT-UNO",
+    "expected_extraction": {
+      "document_classification": "DECLARATION_OF_CONFORMITY",
+      "certificate_id": null,
+      "supplier_name": "Delta Electronics, Inc.",
+      "issue_date": "2025-01-22",
+      "covered_part_numbers": [
+        "UNO-C01X001",
+        "UNO-C07X011",
+        "UNO-C01X000"
+      ],
+      "chemical_data": {
+        "tested_lead_ppm": null,
+        "is_statutory_limit": true
+      }
+    },
+    "expected_audit_result": {
+      "status": "PASS",
+      "screening_priority_score": 10,
+      "flagged_issues": []
+    }
+  }
+]

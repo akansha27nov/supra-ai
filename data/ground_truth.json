@@ -14,7 +14,8 @@
         "CE Directive 2014/30/EU",
         "RoHS Directive 2011/65/EU"
       ],
-      "tested_lead_ppm": 450
+      "tested_lead_ppm": 450,
+      "covered_part_numbers": ["SKU-ELEC-8812"]
     },
     "expected_audit_result": {
       "status": "REJECTED",
@@ -41,7 +42,8 @@
         "RoHS Directive 2011/65/EU",
         "EN 62368-1:2020"
       ],
-      "tested_lead_ppm": 320
+      "tested_lead_ppm": 320,
+      "covered_part_numbers": ["SKU-ELEC-9001"]
     },
     "expected_audit_result": {
       "status": "PASS",
@@ -64,7 +66,8 @@
         "CE Directive 2014/30/EU",
         "RoHS Directive 2011/65/EU"
       ],
-      "tested_lead_ppm": 510
+      "tested_lead_ppm": 510,
+      "covered_part_numbers": ["SKU-ELEC-9002"]
     },
     "expected_audit_result": {
       "status": "FLAGGED",
@@ -89,7 +92,8 @@
         "CE Directive 2014/30/EU",
         "RoHS Directive 2011/65/EU"
       ],
-      "tested_lead_ppm": 1450
+      "tested_lead_ppm": 1450,
+      "covered_part_numbers": ["SKU-ELEC-9003"]
     },
     "expected_audit_result": {
       "status": "REJECTED",
@@ -116,7 +120,8 @@
         "CE Directive 2014/30/EU",
         "RoHS Directive 2011/65/EU"
       ],
-      "tested_lead_ppm": 210
+      "tested_lead_ppm": 210,
+      "covered_part_numbers": ["SKU-ELEC-9004"]
     },
     "expected_audit_result": {
       "status": "REJECTED",
@@ -141,7 +146,8 @@
         "CE Directive 2014/30/EU",
         "RoHS Directive 2011/65/EU"
       ],
-      "tested_lead_ppm": 390
+      "tested_lead_ppm": 390,
+      "covered_part_numbers": ["SKU-ELEC-9005"]
     },
     "expected_audit_result": {
       "status": "FLAGGED",
@@ -167,7 +173,8 @@
         "RoHS Directive 2011/65/EU",
         "ErP Directive 2009/125/EC"
       ],
-      "tested_lead_ppm": 180
+      "tested_lead_ppm": 180,
+      "covered_part_numbers": ["SKU-ELEC-9006"]
     },
     "expected_audit_result": {
       "status": "PASS",
