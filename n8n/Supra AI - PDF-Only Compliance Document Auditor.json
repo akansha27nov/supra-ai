@@ -10,8 +10,8 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        80,
-        1296
+        64,
+        1280
       ]
     },
     {
@@ -74,7 +74,8 @@
         1296
       ],
       "id": "523c3a43-b4f3-492f-b390-df8281079b8d",
-      "name": "Basic LLM Chain"
+      "name": "Basic LLM Chain",
+      "retryOnFail": true
     },
     {
       "parameters": {
@@ -117,7 +118,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// SKU Catalog\nconst skus = [\n  {\n    \"sku\": \"SKU-ELEC-9000\",\n    \"product_name\": \"Over-Ear Wireless Headphones\",\n    \"mandatory_standards\": [\"RED Directive 2014/53/EU\", \"RoHS Directive 2011/65/EU\", \"EN 62368-1:2020\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-8812\",\n    \"product_name\": \"Smart Ambient LED Desk Lamp\",\n    \"mandatory_standards\": [\"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\", \"EN 62368-1:2020\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9007\",\n    \"product_name\": \"65W Fast USB-C Wall Charger\",\n    \"mandatory_standards\": [\"CE Directive 2014/35/EU\", \"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9001\",\n    \"product_name\": \"Pro ANC Wireless Earbuds\",\n    \"mandatory_standards\": [\"RED Directive 2014/53/EU\", \"RoHS Directive 2011/65/EU\", \"EN 62368-1:2020\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9002\",\n    \"product_name\": \"Fitness Tracker Smartwatch V2\",\n    \"mandatory_standards\": [\"RED Directive 2014/53/EU\", \"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9003\",\n    \"product_name\": \"Fast-Charge Power Bank 20000mAh\",\n    \"mandatory_standards\": [\"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\", \"EN 62133-2:2017\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9004\",\n    \"product_name\": \"Ergonomic 27-Inch 4K USB-C Monitor\",\n    \"mandatory_standards\": [\"CE Directive 2014/35/EU\", \"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9005\",\n    \"product_name\": \"7-in-1 Aluminum USB-C Hub\",\n    \"mandatory_standards\": [\"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9006\",\n    \"product_name\": \"Smart Home Voice Assistant Speaker\",\n    \"mandatory_standards\": [\"RED Directive 2014/53/EU\", \"RoHS Directive 2011/65/EU\", \"ErP Directive 2009/125/EC\"],\n    \"max_lead_concentration_ppm\": 1000\n  }\n];\n\nconst extracted = $input.first().json;\nconst formBinary = $node[\"n8n Form Trigger\"].binary ? $node[\"n8n Form Trigger\"].binary.certificate_pdf : null;\nconst fileName = formBinary ? formBinary.fileName : \"\";\n\nlet matchedSku = null;\n\n// Strategy 1: Filename regex match for SKU ID\nconst filenameSkuMatch = fileName.match(/SKU-[A-Z]+-\\d+/i);\nif (filenameSkuMatch) {\n  const code = filenameSkuMatch[0].toUpperCase();\n  matchedSku = skus.find(s => s.sku === code);\n}\n\n// Strategy 2: Fuzzy match extracted product_name against catalog\nif (!matchedSku && extracted.product_name) {\n  const pName = extracted.product_name.toLowerCase();\n  matchedSku = skus.find(s => {\n    const catName = s.product_name.toLowerCase();\n    const keywords = catName.split(\" \").filter(w => w.length > 3);\n    return keywords.filter(kw => pName.includes(kw)).length >= 2;\n  });\n}\n\nreturn [{\n  json: {\n    file_name: fileName,\n    extracted: extracted,\n    associated_sku: matchedSku ? matchedSku.sku : \"UNMATCHED_SKU\",\n    sku_rules: matchedSku || null,\n    sku_match_success: !!matchedSku\n  }\n}];"
+        "jsCode": "// SKU Catalog\nconst skus = [\n  {\n    \"sku\": \"SKU-ELEC-9000\",\n    \"product_name\": \"Over-Ear Wireless Headphones\",\n    \"mandatory_standards\": [\"RED Directive 2014/53/EU\", \"RoHS Directive 2011/65/EU\", \"EN 62368-1:2020\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-8812\",\n    \"product_name\": \"Smart Ambient LED Desk Lamp\",\n    \"mandatory_standards\": [\"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\", \"EN 62368-1:2020\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9007\",\n    \"product_name\": \"65W Fast USB-C Wall Charger\",\n    \"mandatory_standards\": [\"CE Directive 2014/35/EU\", \"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9001\",\n    \"product_name\": \"Pro ANC Wireless Earbuds\",\n    \"mandatory_standards\": [\"RED Directive 2014/53/EU\", \"RoHS Directive 2011/65/EU\", \"EN 62368-1:2020\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9002\",\n    \"product_name\": \"Fitness Tracker Smartwatch V2\",\n    \"mandatory_standards\": [\"RED Directive 2014/53/EU\", \"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9003\",\n    \"product_name\": \"Fast-Charge Power Bank 20000mAh\",\n    \"mandatory_standards\": [\"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\", \"EN 62133-2:2017\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9004\",\n    \"product_name\": \"Ergonomic 27-Inch 4K USB-C Monitor\",\n    \"mandatory_standards\": [\"CE Directive 2014/35/EU\", \"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9005\",\n    \"product_name\": \"7-in-1 Aluminum USB-C Hub\",\n    \"mandatory_standards\": [\"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9006\",\n    \"product_name\": \"Smart Home Voice Assistant Speaker\",\n    \"mandatory_standards\": [\"RED Directive 2014/53/EU\", \"RoHS Directive 2011/65/EU\", \"ErP Directive 2009/125/EC\"],\n    \"max_lead_concentration_ppm\": 1000\n  }\n];\n\nconst extracted = $input.first().json;\n\nlet fileName = \"uploaded_certificate.pdf\";\nconst formNode = $node[\"n8n Form Trigger\"];\n\nif (formNode && formNode.binary) {\n  const binaryKeys = Object.keys(formNode.binary);\n  if (binaryKeys.length > 0) {\n    const firstBinaryField = formNode.binary[binaryKeys[0]];\n    fileName = firstBinaryField.fileName || firstBinaryField.filename || fileName;\n  }\n}\n\nlet matchedSku = null;\n\n// Strategy 1: Filename regex match for SKU ID (e.g. SKU-ELEC-9004)\nconst filenameSkuMatch = fileName.match(/SKU-[A-Z]+-\\d+/i);\nif (filenameSkuMatch) {\n  const code = filenameSkuMatch[0].toUpperCase();\n  matchedSku = skus.find(s => s.sku === code);\n}\n\n// Strategy 2: Fuzzy match extracted product_name against catalog\nif (!matchedSku && extracted.product_name) {\n  const pName = String(extracted.product_name).toLowerCase();\n  matchedSku = skus.find(s => {\n    const catName = s.product_name.toLowerCase();\n    const keywords = catName.split(\" \").filter(w => w.length > 3);\n    return keywords.filter(kw => pName.includes(kw)).length >= 2;\n  });\n}\n\nreturn [{\n  json: {\n    file_name: fileName,\n    extracted: extracted,\n    associated_sku: matchedSku ? matchedSku.sku : \"UNMATCHED_SKU\",\n    sku_rules: matchedSku || null,\n    sku_match_success: !!matchedSku\n  }\n}];"
       },
       "id": "e2abbd53-b443-4569-a1e8-a30ccab1892f",
       "name": "Auto SKU Matcher & Rule Loader",
@@ -130,7 +131,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst extracted = item.extracted;\nconst rules = item.sku_rules;\n\nlet status = \"PASS\";\nlet priorityScore = 10;\nlet issues = [];\n\nif (!item.sku_match_success) {\n  status = \"FLAGGED\";\n  priorityScore = 80;\n  issues.push(\"CRITICAL: Automated catalog matcher could not map document to internal SKU\");\n} else {\n  // 1. Expiration Check\n  const expDate = new Date(extracted.expiration_date);\n  const now = new Date(\"2026-08-28\");\n  const daysToExpiry = (expDate - now) / (1000 * 60 * 60 * 24);\n\n  if (expDate < now) {\n    status = \"REJECTED\";\n    priorityScore += 50;\n    issues.push(`CRITICAL: Certificate expired on ${extracted.expiration_date}`);\n  } else if (daysToExpiry <= 30) {\n    if (status !== \"REJECTED\") status = \"FLAGGED\";\n    priorityScore += 25;\n    issues.push(`WARNING: Certificate expires within 30 days (${extracted.expiration_date})`);\n  }\n\n  // 2. Mandatory Standards Check\n  rules.mandatory_standards.forEach(std => {\n    const found = (extracted.standards_found || []).some(s => s.toLowerCase().includes(std.toLowerCase()));\n    if (!found) {\n      if (status !== \"REJECTED\") status = \"FLAGGED\";\n      priorityScore += 35;\n      issues.push(`WARNING: Missing mandatory standard ${std}`);\n    }\n  });\n\n  // 3. Chemical Threshold Check\n  if (extracted.tested_lead_ppm > rules.max_lead_concentration_ppm) {\n    status = \"REJECTED\";\n    priorityScore += 45;\n    issues.push(`VIOLATION: Lead concentration (${extracted.tested_lead_ppm} ppm) exceeds threshold (${rules.max_lead_concentration_ppm} ppm)`);\n  }\n\n  // 4. Lab Accreditation Check\n  if (extracted.lab_accreditation_id === \"NONE\" || (extracted.issuing_lab && extracted.issuing_lab.includes(\"Unaccredited\"))) {\n    if (status !== \"REJECTED\") status = \"FLAGGED\";\n    priorityScore += 40;\n    issues.push(\"WARNING: Testing conducted by unaccredited lab\");\n  } else if (extracted.lab_accreditation_id && extracted.lab_accreditation_id.includes(\"FAKE\")) {\n    status = \"REJECTED\";\n    priorityScore += 50;\n    issues.push(\"CRITICAL: Suspicious or fake laboratory accreditation ID detected\");\n  }\n}\n\nreturn [{\n  json: {\n    ...item,\n    audit_result: {\n      status: status,\n      screening_priority_score: Math.min(priorityScore, 100),\n      flagged_issues: issues\n    }\n  }\n}];"
+        "jsCode": "const item = $input.first().json;\nconst extracted = item.extracted || {};\nconst rules = item.sku_rules;\n\nlet status = \"PASS\";\nlet priorityScore = 10;\nlet issues = [];\n\n// 1. SKU Match Check\nif (!item.sku_match_success) {\n  status = \"FLAGGED\";\n  priorityScore += 70; // 10 + 70 = 80 base priority\n  issues.push(\"CRITICAL: Automated catalog matcher could not map document to internal SKU\");\n}\n\n// 2. Expiration Check (Universal)\nif (extracted.expiration_date) {\n  const expDate = new Date(extracted.expiration_date);\n  const now = new Date(\"2026-08-28\");\n  const daysToExpiry = (expDate - now) / (1000 * 60 * 60 * 24);\n\n  if (expDate < now) {\n    status = \"REJECTED\";\n    priorityScore += 50;\n    issues.push(`CRITICAL: Certificate expired on ${extracted.expiration_date}`);\n  } else if (daysToExpiry <= 30) {\n    if (status !== \"REJECTED\") status = \"FLAGGED\";\n    priorityScore += 25;\n    issues.push(`WARNING: Certificate expires within 30 days (${extracted.expiration_date})`);\n  }\n}\n\n// 3. SKU-Dependent Checks (Standards & Lead limits)\nif (rules && rules.mandatory_standards) {\n  rules.mandatory_standards.forEach(std => {\n    const found = (extracted.standards_found || []).some(s => String(s).toLowerCase().includes(std.toLowerCase()));\n    if (!found) {\n      if (status !== \"REJECTED\") status = \"FLAGGED\";\n      priorityScore += 35;\n      issues.push(`WARNING: Missing mandatory standard ${std}`);\n    }\n  });\n\n  if (extracted.tested_lead_ppm && extracted.tested_lead_ppm > rules.max_lead_concentration_ppm) {\n    status = \"REJECTED\";\n    priorityScore += 45;\n    issues.push(`VIOLATION: Lead concentration (${extracted.tested_lead_ppm} ppm) exceeds threshold (${rules.max_lead_concentration_ppm} ppm)`);\n  }\n}\n\n// 4. Lab Accreditation Check (Case-Insensitive Universal Check)\nconst labAccId = String(extracted.lab_accreditation_id || \"\").toUpperCase();\nconst issuingLab = String(extracted.issuing_lab || \"\").toUpperCase();\n\nif (labAccId.includes(\"FAKE\") || labAccId.includes(\"UNRECOGNIZED\") || issuingLab.includes(\"UNRECOGNIZED\")) {\n  status = \"REJECTED\";\n  priorityScore += 50;\n  issues.push(`CRITICAL: Suspicious or fake laboratory accreditation detected (${extracted.lab_accreditation_id || 'Unrecognized'})`);\n} else if (labAccId === \"NONE\" || issuingLab.includes(\"UNACCREDITED\")) {\n  if (status !== \"REJECTED\") status = \"FLAGGED\";\n  priorityScore += 40;\n  issues.push(\"WARNING: Testing conducted by unaccredited lab\");\n}\n\nreturn [{\n  json: {\n    ...item,\n    audit_result: {\n      status: status,\n      screening_priority_score: Math.min(priorityScore, 100),\n      flagged_issues: issues\n    }\n  }\n}];"
       },
       "id": "efc75fe1-bda0-4565-b368-8f5e9994c534",
       "name": "Compliance Engine & Priority Scoring",
@@ -245,8 +246,8 @@
       "type": "n8n-nodes-base.notion",
       "typeVersion": 2.2,
       "position": [
-        -288,
-        880
+        -528,
+        992
       ],
       "credentials": {
         "notionApi": {
@@ -260,8 +261,9 @@
         "conditions": {
           "number": [
             {
-              "value1": "={{ $json.audit_result.screening_priority_score }}",
-              "operation": "isEmpty"
+              "value1": "={{ $('Compliance Engine & Priority Scoring').item.json.audit_result.screening_priority_score }}",
+              "operation": "largerEqual",
+              "value2": 50
             }
           ]
         }
@@ -271,14 +273,14 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        -832,
+        -880,
         1312
       ]
     },
     {
       "parameters": {
         "chatId": "8727727063",
-        "text": "=⚠️ *HIGH-RISK CERTIFICATE DETECTED*\n\n*File:* `{{ $json.file_name }}`\n*SKU:* `{{ $json.associated_sku }}`\n*Supplier:* {{ $json.extracted.supplier_name }}\n*Priority Score:* *{{ $json.audit_result.screening_priority_score }}/100*\n*Status:* {{ $json.audit_result.status }}\n\n*Flagged Issues:*\n{{ $json.audit_result.flagged_issues.map(i => \"• \" + i).join(\"\\n\") }}\n\n📋 *Routed to Notion Human Review Queue*",
+        "text": "=⚠️ *HIGH-RISK CERTIFICATE DETECTED*\n\n*File:* `{{ $('Compliance Engine & Priority Scoring').item.json.file_name }}`\n*SKU:* `{{ $('Compliance Engine & Priority Scoring').item.json.associated_sku }}`\n*Supplier:* {{ $('Compliance Engine & Priority Scoring').item.json.extracted.supplier_name || 'N/A' }}\n*Priority Score:* *{{ $('Compliance Engine & Priority Scoring').item.json.audit_result.screening_priority_score }}/100*\n*Status:* {{ $('Compliance Engine & Priority Scoring').item.json.audit_result.status }}\n\n*Flagged Issues:*\n{{ ($('Compliance Engine & Priority Scoring').item.json.audit_result.flagged_issues || []).map(i => \"• \" + i).join(\"\\n\") }}\n\n📋 *Routed to Notion Human Review Queue*",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
@@ -288,8 +290,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -496,
-        1264
+        -592,
+        1216
       ],
       "webhookId": "c3bfe907-9d0d-4815-9e8f-bfb7ae3c2239",
       "credentials": {
@@ -335,8 +337,8 @@
       "type": "n8n-nodes-base.notion",
       "typeVersion": 2.2,
       "position": [
-        -272,
-        1200
+        -352,
+        1216
       ],
       "credentials": {
         "notionApi": {
@@ -354,8 +356,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -160,
-        1424
+        -336,
+        1520
       ]
     },
     {
@@ -391,7 +393,7 @@
       "type": "n8n-nodes-base.notion",
       "typeVersion": 2.2,
       "position": [
-        -416,
+        -560,
         1424
       ],
       "credentials": {
@@ -584,12 +586,12 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "b84c882c-64b2-422e-a0a4-58fd2d458264",
+  "versionId": "18065e35-09d4-4226-b89c-3dde4aa55f20",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "00cafa1eb8a383ac595b6bbf54c5f8acd05d9d1462911bd4a0edac031509b829"
