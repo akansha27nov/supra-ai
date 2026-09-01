@@ -2,10 +2,10 @@
 
 import sys
 from pathlib import Path
-import json
+
 import pandas as pd
-import streamlit as st
 import pdfplumber
+import streamlit as st
 
 ROOT_DIR = Path(__file__).resolve().parent
 if not (ROOT_DIR / "agent").exists():
@@ -14,8 +14,8 @@ if not (ROOT_DIR / "agent").exists():
 if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
 
-from agent.graph import graph
 from agent.gap_notice import generate_supplier_gap_notice
+from agent.graph import graph
 
 st.set_page_config(
     page_title="AI Supplier Compliance Screening",

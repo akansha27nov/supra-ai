@@ -8,7 +8,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from trace_sample import extract_certificate_data, extract_pdf_text, screen_certificate, load_skus
+from trace_sample import (
+    extract_certificate_data,
+    extract_pdf_text,
+    load_skus,
+    screen_certificate,
+)
 
 REAL_WORLD_DIR = Path(__file__).resolve().parent.parent / "data" / "real_world" / "raw"
 
@@ -32,7 +37,7 @@ def run():
             print("EXTRACTED FIELDS:")
             for k, v in extracted.items():
                 print(f"  {k}: {v!r}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"EXTRACTION FAILED: {e}")
             continue
 
@@ -42,7 +47,7 @@ def run():
             result = screen_certificate(extracted, associated_sku=None, sku_catalog=sku_catalog)
             print(f"\nRULE ENGINE RESULT: {result['status']} / {result['screening_priority_score']}")
             print(f"FLAGGED ISSUES: {result['flagged_issues']}")
-        except Exception as e:
+        except Exception as e:   # noqa: BLE001
             print(f"\nRULE ENGINE CRASHED: {e}")
             print("(this is itself a finding — note it in the failure mode analysis)")
 

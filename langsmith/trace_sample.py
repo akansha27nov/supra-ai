@@ -4,16 +4,17 @@ LangSmith observability sample for Supra AI's compliance auditor.
 
 import csv
 import json
-import os
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from dotenv import load_dotenv
-from langsmith import traceable
 from langsmith.wrappers import wrap_openai
 from openai import OpenAI
 from pypdf import PdfReader
+
+from langsmith import traceable
 
 load_dotenv()
 
@@ -40,7 +41,7 @@ SEVERITY = {
 }
 
 
-def load_skus(file_path: Optional[Path] = None) -> Dict[str, Dict[str, Any]]:
+def load_skus(file_path: Path | None = None) -> dict[str, dict[str, Any]]:
     """Loads SKU JSON array or dict and returns a dictionary indexed by SKU code."""
     if file_path is None:
         file_path = DATA_DIR / "skus.json"
@@ -79,7 +80,7 @@ def normalize_standard_code(std_str: str) -> str:
     return re.sub(r"[^A-Z0-9]", "", std_str)
 
 
-def is_standard_present(required_std: str, extracted_standards: List[str]) -> bool:
+def is_standard_present(required_std: str, extracted_standards: list[str]) -> bool:
     """Checks if a required standard is satisfied by extracted standards."""
     req_norm = normalize_standard_code(required_std)
     if not req_norm:
@@ -111,7 +112,7 @@ EXTRACTION_SYSTEM_PROMPT: str = """You are an expert compliance document parsing
 No markdown tags or extra commentary."""
 
 @traceable(name="certificate_information_extraction")
-def extract_certificate_data(certificate_text: str) -> Dict[str, Any]:
+def extract_certificate_data(certificate_text: str) -> dict[str, Any]:
     """Extract structured fields from raw certificate text via LLM with document classification."""
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -146,16 +147,16 @@ def extract_certificate_data(certificate_text: str) -> Dict[str, Any]:
 
 @traceable(name="compliance_screening")
 def screen_certificate(
-    extracted: Dict[str, Any],
-    associated_sku: Optional[str],
-    sku_catalog: Dict[str, Dict[str, Any]],
+    extracted: dict[str, Any],
+    associated_sku: str | None,
+    sku_catalog: dict[str, dict[str, Any]],
     ref_date_str: str = "2026-08-31",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Evaluates extracted document data against catalog rules and assigns audit priority score."""
-    flagged_issues: List[str] = []
+    flagged_issues: list[str] = []
     status = "PASS"
     screening_priority_score = 10
-    ref_date = datetime.strptime(ref_date_str, "%Y-%m-%d")
+    ref_date = datetime.strptime(ref_date_str, "%Y-%m-%d")   # noqa: DTZ007
 
     if isinstance(sku_catalog, list):
         sku_catalog = load_skus()
@@ -205,7 +206,7 @@ def screen_certificate(
     exp_date_str = extracted.get("expiration_date")
     if exp_date_str:
         try:
-            exp_date = datetime.strptime(exp_date_str, "%Y-%m-%d")
+            exp_date = datetime.strptime(exp_date_str, "%Y-%m-%d")   # noqa: DTZ007
             days_to_exp = (exp_date - ref_date).days
             if days_to_exp < 0:
                 flagged_issues.append(f"CRITICAL: Certificate expired on {exp_date_str}")
@@ -228,7 +229,7 @@ def screen_certificate(
             status = "FLAGGED"
     elif not has_expiration_flag:
         try:
-            issue_date = datetime.strptime(issue_date_str, "%Y-%m-%d")
+            issue_date = datetime.strptime(issue_date_str, "%Y-%m-%d")    # noqa: DTZ007
             age_days = (ref_date - issue_date).days
             if age_days > 730:  # Older than 2 years
                 flagged_issues.append("WARNING: Document issue date is older than 2 years baseline")
@@ -297,8 +298,8 @@ def screen_certificate(
 
 @traceable(name="audit_certificate")
 def audit_certificate(
-    file_name: str, certificate_text: str, associated_sku: Optional[str], sku_catalog: Dict[str, Any]
-) -> Dict[str, Any]:
+    file_name: str, certificate_text: str, associated_sku: str | None, sku_catalog: dict[str, Any]
+) -> dict[str, Any]:
     """Parent trace returning flat backward-compatible shape while maintaining nested trace payload."""
     if sku_catalog is None:
         sku_catalog = load_skus()

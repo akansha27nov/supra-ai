@@ -26,7 +26,7 @@ export default function AuditsPage() {
     loadLogs();
   }, []);
 
-  const filteredLogs = logs.filter(log => {
+  const filteredLogs = logs.filter((log: any) => {
     const matchesSearch = 
       (log.SKU || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (log.Supplier || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -136,7 +136,7 @@ export default function AuditsPage() {
                       <td colSpan={7} className="text-center py-8 text-on-surface-variant">No audit records found.</td>
                     </tr>
                   ) : (
-                    filteredLogs.map((log, index) => {
+                    filteredLogs.map((log: any, index: number) => {
                       const logId = log.id || index + 1;
                       const riskScore = log.Score ?? 50;
                       const isRejected = log.Decision === "REJECTED";

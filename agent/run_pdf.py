@@ -1,14 +1,15 @@
 # agent/run_pdf.py
-import sys
+import argparse
 import csv
 import json
-import argparse
-from pathlib import Path
-import pdfplumber
-from pdfplumber.utils.exceptions import PdfminerException
-from pdfminer.pdfparser import PDFSyntaxError
-from dotenv import load_dotenv
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
+
+import pdfplumber
+from dotenv import load_dotenv
+from pdfminer.pdfparser import PDFSyntaxError
+from pdfplumber.utils.exceptions import PdfminerException
 
 load_dotenv()
 sys.path.append(str(Path(__file__).resolve().parent.parent))
@@ -52,7 +53,7 @@ def extract_raw_pdf_text(pdf_path):
     except (PdfminerException, PDFSyntaxError) as e:
         print(f"Warning: Skipping invalid or corrupted PDF - {e}")
         return None
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Warning: Unexpected error reading {pdf_path} - {e}")
         return None
 
@@ -87,7 +88,7 @@ def _corrupted_file_result(file_path: Path) -> dict:
     }
 
 
-def audit_file(file_path: Path, sku_catalog: dict, associated_sku: str = None) -> dict:
+def audit_file(file_path: Path, sku_catalog: dict, associated_sku: str | None = None) -> dict:
     print(f"\n--- Auditing: {file_path.name} ---")
     raw_text = extract_raw_pdf_text(str(file_path))
 

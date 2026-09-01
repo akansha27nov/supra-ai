@@ -1,6 +1,7 @@
 # agent/schemas.py
 from datetime import datetime, timezone
-from typing import List, Literal, Optional
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
 
 FieldStatusType = Literal["present", "absent_expected", "absent_appropriate", "ambiguous"]
@@ -39,7 +40,7 @@ class ExtractedCertificateData(BaseModel):
     the internal SKU deterministically in `resolve_sku_node`, matching your n8n workflow's
     "Auto SKU Matcher" pattern and acceptance criteria AC-10/AC-11.
     """
-    covered_part_numbers: List[str] = Field(
+    covered_part_numbers: list[str] = Field(
         default_factory=list,
         description=(
             "ALL manufacturer model numbers, part numbers, SKUs, or product series printed "
@@ -49,23 +50,23 @@ class ExtractedCertificateData(BaseModel):
             "of returning an empty list."
         )
     )
-    issue_date: Optional[str] = Field(
+    issue_date: str | None = Field(
         default=None,
         description="Date document was issued in YYYY-MM-DD format."
     )
-    expiration_date: Optional[str] = Field(
+    expiration_date: str | None = Field(
         default=None,
         description="Date document expires in YYYY-MM-DD format."
     )
-    accreditation_id: Optional[str] = Field(
+    accreditation_id: str | None = Field(
         default=None,
         description="Testing laboratory accreditation identifier (e.g., DAKKS-12345, CNAS-L0001)."
     )
-    standards_tested: List[str] = Field(
+    standards_tested: list[str] = Field(
         default_factory=list,
         description="List of compliance standards or directives cited."
     )
-    tested_lead_ppm: Optional[float] = Field(
+    tested_lead_ppm: float | None = Field(
         default=None,
         description="Measured lead concentration value in parts per million (ppm)."
     )
@@ -76,7 +77,7 @@ class ExtractedCertificateData(BaseModel):
 
     @field_validator("issue_date", "expiration_date", mode="before")
     @classmethod
-    def sanitize_date_strings(cls, v: Optional[str]) -> Optional[str]:
+    def sanitize_date_strings(cls, v: str | None) -> str | None:
         if not v or str(v).lower() in ["n/a", "none", "null", "unknown", "undefined"]:
             return None
         return v
@@ -109,7 +110,7 @@ class AuditResult(BaseModel):
         ...,
         description="Final compliance decision."
     )
-    flags: List[RuleViolation] = Field(
+    flags: list[RuleViolation] = Field(
         default_factory=list,
         description="Itemized list of rule violations and risk flags."
     )

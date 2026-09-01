@@ -1,18 +1,19 @@
 # agent/server.py
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Extract text (using pdfplumber like your script does)
-import pdfplumber
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-import numpy as np
-import pandas as pd
-from pathlib import Path
 import shutil
-from datetime import datetime, timezone
+from pathlib import Path
+
+import pandas as pd
+import pdfplumber
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 
 from agent.graph import graph
+
 # Import your logging helpers from your run script or a shared module
 # from agent.run_pdf import save_markdown_log, append_to_master_csv
 
@@ -31,13 +32,13 @@ UPLOAD_DIR = Path("data/uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @app.post("/api/audit")
-async def audit_uploaded_pdf(file: UploadFile = File(...)):
+async def audit_uploaded_pdf(file: UploadFile = File(...)):   # noqa: B008
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
     
     # Save the uploaded file temporarily
     file_path = UPLOAD_DIR / file.filename
-    with open(file_path, "wb") as buffer:
+    with open(file_path, "wb") as buffer:    # noqa: ASYNC230
         shutil.copyfileobj(file.file, buffer)
         
     raw_text = ""

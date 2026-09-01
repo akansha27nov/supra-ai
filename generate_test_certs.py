@@ -1,4 +1,5 @@
 import os
+
 from fpdf import FPDF
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "data/sample_pdfs")

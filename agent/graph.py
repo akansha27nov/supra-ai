@@ -2,18 +2,18 @@
 
 import re
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Literal, Optional, TypedDict
+from typing import Any, Literal, TypedDict
+
 from langchain_openai import ChatOpenAI
-from langgraph.graph import StateGraph, END, START
+from langgraph.graph import END, START, StateGraph
 
 from agent.schemas import (
+    AuditResult,
     DocumentClassification,
     ExtractedCertificateData,
-    AuditResult,
-    RuleViolation,
     FieldStatusType,
+    RuleViolation,
 )
-
 
 # ==========================================
 # 1. State Definition
@@ -23,16 +23,16 @@ class AuditState(TypedDict):
     file_name: str
     raw_text: str
     doc_type: Literal["lab_test_report", "manufacturer_self_declaration", "unknown"]
-    extracted: Dict[str, Any]
-    field_status: Dict[str, FieldStatusType]
+    extracted: dict[str, Any]
+    field_status: dict[str, FieldStatusType]
     reconciliation_attempts: int
     needs_human_review: bool
-    review_reason: Optional[str]
+    review_reason: str | None
     # --- SKU resolution (new) ---
-    sku_catalog: Dict[str, Dict[str, Any]]          # provided at invoke time, e.g. loaded from skus.json
-    associated_sku: Optional[str]                    # either provided directly, or resolved deterministically
+    sku_catalog: dict[str, dict[str, Any]]          # provided at invoke time, e.g. loaded from skus.json
+    associated_sku: str | None                    # either provided directly, or resolved deterministically
     sku_match_status: Literal["matched", "unmatched", "not_attempted"]
-    audit_result: Optional[Dict[str, Any]]
+    audit_result: dict[str, Any] | None
 
 
 # ==========================================
@@ -77,14 +77,14 @@ def _normalize_std(std: str) -> str:
     return re.sub(r"[^A-Z0-9]", "", std)
 
 
-def _standard_is_covered(required_std: str, extracted_standards: List[str]) -> bool:
+def _standard_is_covered(required_std: str, extracted_standards: list[str]) -> bool:
     req_norm = _normalize_std(required_std)
     if not req_norm:
         return False
     return any(req_norm in _normalize_std(s) or _normalize_std(s) in req_norm for s in extracted_standards)
 
 
-def match_sku(covered_part_numbers: List[str], sku_catalog: Dict[str, Dict[str, Any]]) -> Optional[str]:
+def match_sku(covered_part_numbers: list[str], sku_catalog: dict[str, dict[str, Any]]) -> str | None:
     """Deterministic (non-LLM) SKU resolution: matches extracted part/model numbers
     against each catalog entry's own `covered_part_numbers` cross-reference list.
 
@@ -111,7 +111,7 @@ def match_sku(covered_part_numbers: List[str], sku_catalog: Dict[str, Dict[str, 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
 
 
-def extract_node(state: AuditState) -> Dict[str, Any]:
+def extract_node(state: AuditState) -> dict[str, Any]:
     """Initial LLM extraction call."""
     structured_llm = llm.with_structured_output(ExtractedCertificateData)
     prompt = f"Extract compliance information from the following document:\n\n{state['raw_text']}"
@@ -126,7 +126,7 @@ def extract_node(state: AuditState) -> Dict[str, Any]:
     }
 
 
-def classify_doc_type_node(state: AuditState) -> Dict[str, Any]:
+def classify_doc_type_node(state: AuditState) -> dict[str, Any]:
     """Classifies document type prior to field validation."""
     structured_llm = llm.with_structured_output(DocumentClassification)
     prompt = (
@@ -138,11 +138,11 @@ def classify_doc_type_node(state: AuditState) -> Dict[str, Any]:
     return {"doc_type": result.doc_type}
 
 
-def validate_fields_node(state: AuditState) -> Dict[str, Any]:
+def validate_fields_node(state: AuditState) -> dict[str, Any]:
     """Evaluates field presence vs doc_type expectations."""
     data = state["extracted"]
     doc_type = state.get("doc_type", "unknown")
-    field_status: Dict[str, FieldStatusType] = {}
+    field_status: dict[str, FieldStatusType] = {}
 
     # 1. Covered part numbers — replaces the old sku_code check. A document should
     # always be able to say what it covers, so there's no "absent_appropriate" branch here.
@@ -180,7 +180,7 @@ def validate_fields_node(state: AuditState) -> Dict[str, Any]:
     }
 
 
-def reconcile_node(state: AuditState) -> Dict[str, Any]:
+def reconcile_node(state: AuditState) -> dict[str, Any]:
     """Targeted re-extraction attempting to resolve absent_expected/ambiguous fields."""
     import json
 
@@ -214,7 +214,7 @@ def reconcile_node(state: AuditState) -> Dict[str, Any]:
     }
 
 
-def resolve_sku_node(state: AuditState) -> Dict[str, Any]:
+def resolve_sku_node(state: AuditState) -> dict[str, Any]:
     """Deterministic (non-LLM) SKU resolution — runs once extraction is final, right
     before the rule engine. Uses an explicitly-provided `associated_sku` if the caller
     already knows it (e.g. selected from a dropdown in the UI, or supplied by a benchmark
@@ -236,7 +236,7 @@ def resolve_sku_node(state: AuditState) -> Dict[str, Any]:
     return {"associated_sku": None, "sku_match_status": "unmatched"}
 
 
-def rule_engine_node(state: AuditState) -> Dict[str, Any]:
+def rule_engine_node(state: AuditState) -> dict[str, Any]:
     """Deterministic policy decision. This is the one place decisions get made —
     everything above this node only prepares clean, honestly-labeled evidence for it."""
     data = dict(state["extracted"])  # local copy — Check 1 may correct a mislabeled field below
@@ -248,7 +248,7 @@ def rule_engine_node(state: AuditState) -> Dict[str, Any]:
     sku_record = sku_catalog.get(associated_sku) if associated_sku else None
 
     score = 0
-    violations: List[RuleViolation] = []
+    violations: list[RuleViolation] = []
 
     # Check 1: Lead-value / statutory-limit consistency sanity check. Zero severity —
     # this doesn't push the score, it just corrects the field and makes the correction
@@ -274,8 +274,8 @@ def rule_engine_node(state: AuditState) -> Dict[str, Any]:
     exp_date_str = data.get("expiration_date")
     if issue_date_str and exp_date_str:
         try:
-            issue_dt = datetime.strptime(issue_date_str, "%Y-%m-%d")
-            exp_dt = datetime.strptime(exp_date_str, "%Y-%m-%d")
+            issue_dt = datetime.strptime(issue_date_str, "%Y-%m-%d") # noqa: DTZ007
+            exp_dt = datetime.strptime(exp_date_str, "%Y-%m-%d") # noqa: DTZ007
             if exp_dt < issue_dt:
                 score += 40
                 violations.append(
@@ -343,8 +343,8 @@ def rule_engine_node(state: AuditState) -> Dict[str, Any]:
         exp_date_str = data.get("expiration_date")
         if exp_date_str:
             try:
-                exp_date = datetime.strptime(exp_date_str, "%Y-%m-%d")
-                if exp_date < datetime.now():
+                exp_date = datetime.strptime(exp_date_str, "%Y-%m-%d") # noqa: DTZ007
+                if exp_date < datetime.now():     # noqa: DTZ005
                     score += 90
                     violations.append(
                         RuleViolation(
@@ -451,7 +451,7 @@ def rule_engine_node(state: AuditState) -> Dict[str, Any]:
     return {"audit_result": audit_result.model_dump()}
 
 
-def flag_for_human_review_node(state: AuditState) -> Dict[str, Any]:
+def flag_for_human_review_node(state: AuditState) -> dict[str, Any]:
     """First-class human escalation node when fields remain unresolved after 2 retries."""
     unresolved = [f for f, s in state["field_status"].items() if s in ["absent_expected", "ambiguous"]]
     reason = f"Unresolved fields after {state['reconciliation_attempts']} retries: {unresolved}"

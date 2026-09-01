@@ -12,6 +12,7 @@ from trace_sample import (
     screen_certificate,
 )
 
+
 # ==============================================================================
 # TIER 1: LLM EXTRACTION PRECISION BENCHMARK (Real PDFs)
 # ==============================================================================

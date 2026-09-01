@@ -2,14 +2,14 @@
 
 import sys
 from pathlib import Path
-from typing import Optional
+
 from dotenv import load_dotenv
 
 load_dotenv()
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
 
@@ -18,7 +18,7 @@ def generate_supplier_gap_notice(
     audit_result: dict,
     extracted_data: dict,
     supplier_name: str = "Supplier",
-    associated_sku: Optional[str] = None,
+    associated_sku: str | None = None,
 ) -> str:
     """
     Generates a draft email to a supplier regarding compliance gaps.
@@ -47,15 +47,25 @@ def generate_supplier_gap_notice(
     sku_display = associated_sku or (", ".join(covered_parts) if covered_parts else "[Unknown SKU]")
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are a professional procurement and compliance officer. "
-                   "Draft a concise, polite email to a supplier requesting updated documentation. "
-                   "Clearly state the identified issues and provide evidence based on the compliance review. "
-                   "Do not invent any information."),
-        ("user", "Supplier Name: {supplier_name}\n"
-                 "Product / SKU: {sku}\n"
-                 "Decision: {decision}\n"
-                 "Identified Issues:\n{issues_list}\n\n"
-                 "Please draft the gap notice email.")
+        (
+            "system", 
+            ( 
+                "You are a professional procurement and compliance officer. "
+                "Draft a concise, polite email to a supplier requesting updated documentation. "
+                "Clearly state the identified issues and provide evidence based on the compliance review. "
+                "Do not invent any information."
+            )
+        ),
+        (
+            "user", 
+            (
+                "Supplier Name: {supplier_name}\n"
+                "Product / SKU: {sku}\n"
+                "Decision: {decision}\n"
+                "Identified Issues:\n{issues_list}\n\n"
+                "Please draft the gap notice email."
+            )
+        )
     ])
 
     chain = prompt | llm

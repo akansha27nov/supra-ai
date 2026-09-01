@@ -11,14 +11,14 @@ export default function AuditDetailPage() {
   const params = useParams();
   const auditId = params?.id as string || '1';
 
-  const [audit, setAudit] = useState<AuditLog | null>(null);
+  const [audit, setAudit] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadAudit = async () => {
       try {
-        const logs = await fetchAuditLogs();
-        const found = logs.find((l, idx) => String(l.id || idx + 1) === auditId) || logs[0];
+        const logs = (await fetchAuditLogs()) as any[];
+        const found = logs.find((l: any, idx: number) => String(l.id || idx + 1) === auditId) || logs[0];
         setAudit(found || null);
       } catch (error) {
         console.error("Failed to load audit detail:", error);

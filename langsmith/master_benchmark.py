@@ -21,7 +21,7 @@ def evaluate_dataset(dataset_label: str, data_file: Path, pdf_dir: Path, sku_fil
 
     sku_catalog = load_skus(sku_file)
 
-    print(f"\n" + "=" * 85)
+    print("\n" + "=" * 85)
     print(f"  RUNNING BENCHMARK: {dataset_label.upper()}")
     print("=" * 85)
     print(f"{'File':<40} {'Expected':<15} {'Actual':<15} {'Status'}")

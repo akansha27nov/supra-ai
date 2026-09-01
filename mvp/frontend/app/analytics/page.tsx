@@ -6,6 +6,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { Bot, Send, History, Terminal, FileSpreadsheet } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { fetchAuditLogs, AuditLog } from '@/lib/api';
+import { AnyAaaaRecord } from 'node:dns';
 
 export default function AnalyticsDashboard() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -26,12 +27,14 @@ export default function AnalyticsDashboard() {
     loadLogs();
   }, []);
 
-  const { messages, input, handleInputChange, handleSubmit } = useChat({
+  const chatHelpers = useChat({
     initialMessages: [
       { id: '1', role: 'user', content: "Analyze Global Packaging Ltd's recent critical safety finding." },
       { id: '2', role: 'assistant', content: "The safety finding involves improper hazardous material storage. Recommend immediate CAPA issuance. Similar past incidents with this supplier took avg 12 days to resolve." }
     ]
-  });
+  } as any);
+
+  const { messages, input, handleInputChange, handleSubmit } = chatHelpers as any;
 
   // --- DYNAMIC CALCULATIONS ---
   const totalLogs = logs.length;
@@ -281,7 +284,7 @@ export default function AnalyticsDashboard() {
           {/* Vercel AI SDK Chat Interface */}
           <div className="mt-auto px-5 pb-5 h-[340px] flex flex-col border-t border-outline-variant pt-4">
             <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-1 text-sm">
-              {messages.map((m) => (
+              {messages.map((m: any) => (
                 <div key={m.id} className={`p-3 rounded-xl border text-xs leading-relaxed ${m.role === 'user' ? 'bg-surface-container rounded-tl-none border-outline-variant/25' : 'bg-tertiary-container/10 rounded-tr-none border-tertiary/20'}`}>
                   {m.role === 'assistant' && <span className="font-bold text-tertiary mb-1 flex items-center gap-1.5"><Bot size={13}/> Supra AI</span>}
                   {m.content}
