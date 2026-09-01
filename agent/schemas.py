@@ -28,10 +28,26 @@ class DocumentClassification(BaseModel):
 # ==========================================
 
 class ExtractedCertificateData(BaseModel):
-    """Structured extraction target model for raw certificate PDF text."""
-    sku_code: Optional[str] = Field(
-        default=None,
-        description="Product SKU identifier code found on the certificate (e.g., SKU-ELE-002)."
+    """Structured extraction target model for raw certificate PDF text.
+
+    NOTE: there is no `sku_code` field here on purpose. Your *internal* SKU code
+    (e.g. "SKU-ELEC-9001") is something you assign after the fact by cross-referencing
+    the manufacturer's part/model numbers against your catalog — it will never appear
+    inside a supplier's PDF, so asking the LLM to extract it just forces a guess or an
+    endless reconciliation loop. Instead we extract `covered_part_numbers` (what the
+    document actually prints — model numbers, part numbers, product series) and resolve
+    the internal SKU deterministically in `resolve_sku_node`, matching your n8n workflow's
+    "Auto SKU Matcher" pattern and acceptance criteria AC-10/AC-11.
+    """
+    covered_part_numbers: List[str] = Field(
+        default_factory=list,
+        description=(
+            "ALL manufacturer model numbers, part numbers, SKUs, or product series printed "
+            "in the document (headers, footers, tables, or body text). If a family/series code "
+            "is given (e.g. 'ENV-IQ-AM1-240', 'UNO-C01X001'), extract every listed variant. "
+            "If no alphanumeric code is present, extract the primary product name/title instead "
+            "of returning an empty list."
+        )
     )
     issue_date: Optional[str] = Field(
         default=None,
@@ -63,6 +79,16 @@ class ExtractedCertificateData(BaseModel):
     def sanitize_date_strings(cls, v: Optional[str]) -> Optional[str]:
         if not v or str(v).lower() in ["n/a", "none", "null", "unknown", "undefined"]:
             return None
+        return v
+
+    @field_validator("covered_part_numbers", mode="before")
+    @classmethod
+    def sanitize_part_numbers(cls, v):
+        if not v:
+            return []
+        # Guard against the LLM occasionally returning a single string instead of a list
+        if isinstance(v, str):
+            return [v]
         return v
 
 
