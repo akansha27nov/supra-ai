@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
-import { fetchAuditLogs, AuditLog } from '@/lib/api';
+import { fetchAuditLogs, AuditLog, uploadAuditDocument } from '@/lib/api';
+import { Plus, FileUp, ShieldCheck, AlertCircle, FileText, CheckCircle2, XCircle, X } from 'lucide-react';
 
 export default function DashboardPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -13,19 +14,27 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
 
-  // 1. Fetch data using the centralized API function
-  useEffect(() => {
-    const loadLogs = async () => {
-      try {
-        const sortedData = await fetchAuditLogs();
-        setLogs(sortedData);
-      } catch (error) {
-        console.error("Error loading dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // --- Modal & Upload State ---
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [auditResult, setAuditResult] = useState<any | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 1. Fetch data using the centralized API function
+  const loadLogs = async () => {
+    try {
+      const sortedData = await fetchAuditLogs();
+      setLogs(sortedData);
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadLogs();
   }, []);
 
@@ -33,6 +42,38 @@ export default function DashboardPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [logs]);
+
+  // --- Modal Handlers ---
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+      setErrorMsg(null);
+    }
+  };
+
+  const handleRunAudit = async () => {
+    if (!selectedFile) return;
+    setIsProcessing(true);
+    setErrorMsg(null);
+
+    try {
+      const response = await uploadAuditDocument(selectedFile);
+      setAuditResult(response);
+      await loadLogs(); 
+    } catch (error: any) {
+      setErrorMsg(error.message || "Failed to execute compliance pipeline.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  const resetAndCloseModal = () => {
+    setIsModalOpen(false);
+    setTimeout(() => {
+      setSelectedFile(null);
+      setAuditResult(null);
+      setErrorMsg(null);
+    }, 200); 
+  };
 
   // Helper to format the backend decision into your UI badges
   const renderStatusBadge = (decision: string) => {
@@ -117,7 +158,108 @@ export default function DashboardPage() {
     <div className="bg-background text-on-background min-h-screen flex antialiased selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
       {/* Shared Sidebar */}
       <Sidebar activePage="dashboard" />
+      {/* --- UPLOAD MODAL --- */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface-bright w-full max-w-2xl rounded-2xl shadow-2xl border border-surface-variant flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+            
+            <div className="flex justify-between items-center p-5 border-b border-surface-variant">
+              <h2 className="text-xl font-bold font-headline-md text-on-background">Run Compliance Audit</h2>
+              <button onClick={resetAndCloseModal} className="p-1.5 rounded-full hover:bg-surface-container text-on-surface-variant transition-colors">
+                <X size={20} />
+              </button>
+            </div>
 
+            <div className="p-6 overflow-y-auto custom-scrollbar">
+              {!auditResult ? (
+                <div className="flex flex-col items-center justify-center text-center py-6">
+                  <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".pdf" className="hidden" />
+                  
+                  <div className="w-16 h-16 rounded-full bg-primary-container/30 text-primary flex items-center justify-center mb-4">
+                    <FileUp size={32} />
+                  </div>
+                  
+                  <h3 className="text-lg font-bold text-on-surface font-headline-sm mb-1">Upload Supplier Document</h3>
+                  <p className="text-sm text-on-surface-variant max-w-sm mb-6 font-body-md">
+                    Upload an SDS, RoHS certificate, or material declaration to run through the AI engine.
+                  </p>
+
+                  {selectedFile ? (
+                    <div className="flex items-center gap-3 bg-surface-container px-4 py-3 rounded-xl border border-outline-variant mb-6 w-full justify-between">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <FileText size={20} className="text-primary shrink-0" />
+                        <span className="text-sm font-medium text-on-surface truncate">{selectedFile.name}</span>
+                      </div>
+                      <button onClick={() => setSelectedFile(null)} className="text-xs text-error font-medium hover:underline">Remove</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => fileInputRef.current?.click()} className="px-6 py-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface font-medium hover:bg-surface-container transition-colors shadow-sm text-sm mb-6">
+                      Browse PDF File
+                    </button>
+                  )}
+
+                  {errorMsg && (
+                    <div className="mb-4 p-3 bg-error-container/20 border border-error/30 text-error rounded-xl text-xs flex items-center gap-2 w-full text-left">
+                      <AlertCircle size={16} className="shrink-0" /> {errorMsg}
+                    </div>
+                  )}
+
+                  <button 
+                    onClick={handleRunAudit}
+                    disabled={!selectedFile || isProcessing}
+                    className="w-full bg-primary text-on-primary font-medium py-3 px-6 rounded-xl flex items-center justify-center gap-2 hover:bg-surface-tint transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isProcessing ? (
+                      <><div className="w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin"></div> Executing Pipeline...</>
+                    ) : (
+                      <><ShieldCheck size={18} /> Analyze & Generate Gap Notice</>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-5">
+                  <div className={`p-5 rounded-2xl border flex items-start gap-4 ${auditResult.audit_result?.decision === 'APPROVED' ? 'bg-tertiary-container/10 border-tertiary/30 text-tertiary' : 'bg-error-container/10 border-error/30 text-error'}`}>
+                    {auditResult.audit_result?.decision === 'APPROVED' ? <CheckCircle2 size={24} className="shrink-0 mt-0.5" /> : <XCircle size={24} className="shrink-0 mt-0.5" />}
+                    <div>
+                      <h4 className="font-bold text-lg mb-0.5">Decision: {auditResult.audit_result?.decision || 'Reviewed'}</h4>
+                      <p className="text-sm text-on-surface font-body-md">Risk Score: <strong className="font-bold">{auditResult.audit_result?.score ?? 'N/A'} / 100</strong></p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant flex flex-col gap-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant font-label-caps">Extracted Flags</h4>
+                      <div className="p-3 bg-surface-container rounded-lg border border-outline-variant font-mono text-xs text-on-surface">
+                        {auditResult.audit_result?.flags && auditResult.audit_result.flags.length > 0 
+                          ? JSON.stringify(auditResult.audit_result.flags, null, 2) 
+                          : "No compliance infractions flagged."}
+                      </div>
+                    </div>
+                    <div className="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant flex flex-col gap-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant font-label-caps">AI Gap Notice</h4>
+                      <p className="text-sm text-on-surface leading-relaxed font-body-md">
+                        {auditResult.audit_result?.decision === 'APPROVED' ? "The document successfully passed evaluation." : "Review flagged items."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )
+              }
+            </div>
+
+            {auditResult && (
+              <div className="p-5 border-t border-surface-variant bg-surface-container-lowest rounded-b-2xl flex justify-end gap-3">
+                <button onClick={() => { setAuditResult(null); setSelectedFile(null); }} className="px-4 py-2 rounded-lg border border-outline-variant bg-surface-bright text-on-surface text-sm font-medium hover:bg-surface-container transition-colors">
+                  Run Another
+                </button>
+                <button onClick={resetAndCloseModal} className="px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-medium hover:bg-surface-tint transition-colors shadow-sm">
+                  Done
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {/* Main Content Wrapper */}
       <main className="flex-1 flex flex-col md:ml-64 h-screen overflow-hidden bg-surface-bright">
         {/* TopNavBar (Mobile Only) */}
@@ -144,10 +286,19 @@ export default function DashboardPage() {
               <h2 className="text-[30px] font-bold font-headline-lg text-on-background leading-tight">Welcome back, Chleo.</h2>
               <p className="text-sm text-on-surface-variant mt-0.5 font-body-md">Here is your procurement compliance overview for today.</p>
             </div>
+            {/* CTA */}
             <div className="flex gap-2">
               <button className="flex items-center gap-2 bg-surface-container-highest text-on-surface px-4 py-2 rounded text-sm font-medium border border-outline-variant hover:bg-surface-container transition-colors shadow-sm">
                 <span className="material-symbols-outlined" data-icon="download" style={{ fontSize: '18px' }}>download</span>
                   Export Report
+              </button>
+              {/* Trigger for the modal */}
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded text-sm font-medium hover:bg-surface-tint transition-colors shadow-sm"
+              >
+                <Plus size={18} />
+                New Audit
               </button>
               <button className="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded text-sm font-medium hover:bg-surface-tint transition-colors shadow-sm">
                 <span className="material-symbols-outlined" data-icon="done_all" style={{ fontSize: '18px' }}>done_all</span>

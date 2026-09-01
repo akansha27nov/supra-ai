@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { Bot, Send, History, Terminal, FileSpreadsheet } from 'lucide-react';
+import { Bot, History, Terminal, FileSpreadsheet } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import { fetchAuditLogs, AuditLog } from '@/lib/api';
 import { AnyAaaaRecord } from 'node:dns';
@@ -264,41 +264,6 @@ export default function AnalyticsDashboard() {
 
         {/* Resizable Divider Handle */}
         <PanelResizeHandle className="w-[1px] bg-outline-variant hover:w-1.5 hover:bg-primary-container transition-all cursor-col-resize z-10" />
-
-        {/* AI Co-Pilot Panel */}
-        <Panel defaultSize={25} minSize={20} className="bg-surface-container-lowest border-l border-outline-variant flex flex-col relative shadow-sm h-screen">
-          <div className="px-6 py-5 border-b border-outline-variant/50">
-            <div className="font-headline-sm text-base font-bold text-tertiary flex items-center gap-2">
-              <Bot size={18} /> AI Co-Pilot
-            </div>
-            <div className="text-on-surface-variant text-xs mt-0.5">Contextual Intelligence Engine</div>
-          </div>
-          
-          <nav className="flex flex-col text-sm py-2">
-            <span className="flex items-center gap-3 px-6 py-2.5 border-l-4 border-tertiary bg-tertiary-container/10 text-tertiary font-medium"><Bot size={16}/> Co-Pilot Chat</span>
-            <span className="flex items-center gap-3 px-6 py-2.5 border-l-4 border-transparent text-on-surface-variant hover:bg-surface-container cursor-pointer"><History size={16}/> History</span>
-            <span className="flex items-center gap-3 px-6 py-2.5 border-l-4 border-transparent text-on-surface-variant hover:bg-surface-container cursor-pointer"><Terminal size={16}/> Prompts</span>
-            <span className="flex items-center gap-3 px-6 py-2.5 border-l-4 border-transparent text-on-surface-variant hover:bg-surface-container cursor-pointer"><FileSpreadsheet size={16}/> Reports</span>
-          </nav>
-
-          {/* Vercel AI SDK Chat Interface */}
-          <div className="mt-auto px-5 pb-5 h-[340px] flex flex-col border-t border-outline-variant pt-4">
-            <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-1 text-sm">
-              {messages.map((m: any) => (
-                <div key={m.id} className={`p-3 rounded-xl border text-xs leading-relaxed ${m.role === 'user' ? 'bg-surface-container rounded-tl-none border-outline-variant/25' : 'bg-tertiary-container/10 rounded-tr-none border-tertiary/20'}`}>
-                  {m.role === 'assistant' && <span className="font-bold text-tertiary mb-1 flex items-center gap-1.5"><Bot size={13}/> Supra AI</span>}
-                  {m.content}
-                </div>
-              ))}
-            </div>
-            <form onSubmit={handleSubmit} className="relative mt-auto">
-              <input value={input} onChange={handleInputChange} className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg py-2.5 pl-3 pr-10 text-xs focus:border-tertiary focus:ring-1 focus:ring-tertiary outline-none transition-all shadow-sm" placeholder="Ask Co-Pilot about regulations, CAPAs..." />
-              <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-tertiary hover:text-tertiary-container">
-                <Send size={15} />
-              </button>
-            </form>
-          </div>
-        </Panel>
 
       </PanelGroup>
     </div>

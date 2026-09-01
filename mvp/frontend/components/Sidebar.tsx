@@ -31,14 +31,6 @@ export default function Sidebar({ activePage }: SidebarProps) {
         </div>
       </div>
 
-      {/* CTA */}
-      <div className="px-4 mb-4">
-        <button className="w-full bg-primary text-on-primary py-2 rounded font-body-md text-sm font-medium hover:bg-surface-tint transition-colors flex items-center justify-center gap-2 shadow-sm">
-          <Plus size={18} />
-          New Audit
-        </button>
-      </div>
-
       {/* Navigation Links */}
       <nav className="flex-1 flex flex-col gap-1 px-4">
         <Link 
