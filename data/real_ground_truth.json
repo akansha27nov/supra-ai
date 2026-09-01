@@ -116,5 +116,21 @@
       "screening_priority_score": 10,
       "flagged_issues": []
     }
+  },
+  {
+    "file_name": "Celestron Smartphone Adapter — RoHS Lab Report.pdf",
+    "associated_sku": "...",
+    "expected_extraction": {
+      "document_classification": "LAB_REPORT",
+      "chemical_data": {
+        "tested_lead_ppm": 29300,
+        "is_statutory_limit": false
+      }
+    },
+    "expected_audit_result": {
+      "status": "REJECTED",
+      "screening_priority_score": 95,
+      "flagged_issues": []
+    }
   }
 ]

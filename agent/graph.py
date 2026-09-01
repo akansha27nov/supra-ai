@@ -28,7 +28,6 @@ class AuditState(TypedDict):
     reconciliation_attempts: int
     needs_human_review: bool
     review_reason: str | None
-    # --- SKU resolution (new) ---
     sku_catalog: dict[str, dict[str, Any]]          # provided at invoke time, e.g. loaded from skus.json
     associated_sku: str | None                    # either provided directly, or resolved deterministically
     sku_match_status: Literal["matched", "unmatched", "not_attempted"]
@@ -173,26 +172,15 @@ def validate_fields_node(state: AuditState) -> dict[str, Any]:
     doc_type = state.get("doc_type", "unknown")
     field_status: dict[str, FieldStatusType] = {}
 
-    # 1. Covered part numbers — replaces the old sku_code check. A document should
-    # always be able to say what it covers, so there's no "absent_appropriate" branch here.
+    # 1. Covered part numbers
     field_status["covered_part_numbers"] = "present" if data.get("covered_part_numbers") else "absent_expected"
 
     # 2. Accreditation ID
-    if data.get("accreditation_id"):
-        field_status["accreditation_id"] = "present"
-    elif doc_type == "manufacturer_self_declaration":
-        field_status["accreditation_id"] = "absent_appropriate"
-    else:
-        field_status["accreditation_id"] = "absent_expected"
-
+    field_status["accreditation_id"] = "present" if data.get("accreditation_id") else "absent_appropriate"
+        
     # 3. Expiration Date
-    if data.get("expiration_date"):
-        field_status["expiration_date"] = "present"
-    elif doc_type == "manufacturer_self_declaration":
-        field_status["expiration_date"] = "absent_appropriate"
-    else:
-        field_status["expiration_date"] = "absent_expected"
-
+    field_status["expiration_date"] = "present" if data.get("expiration_date") else "absent_appropriate"
+        
     # 4. Tested Lead PPM
     if data.get("tested_lead_ppm") is not None:
         field_status["tested_lead_ppm"] = "present"
@@ -200,7 +188,7 @@ def validate_fields_node(state: AuditState) -> dict[str, Any]:
         field_status["tested_lead_ppm"] = "absent_expected"
     else:
         field_status["tested_lead_ppm"] = "absent_appropriate"
-
+        
     has_ambiguity = any(status in ["absent_expected", "ambiguous"] for status in field_status.values())
 
     return {
@@ -370,14 +358,35 @@ def rule_engine_node(state: AuditState) -> dict[str, Any]:
         lead_ppm = data.get("tested_lead_ppm", 0.0)
         max_lead = sku_record.get("max_lead_concentration_ppm", DEFAULT_LEAD_PPM_THRESHOLD) if sku_record else DEFAULT_LEAD_PPM_THRESHOLD
         if lead_ppm > max_lead:
-            violations.append(
-                RuleViolation(
-                    code="LEAD_EXCESS_VIOLATION",
-                    severity_score=95,
-                    message=f"VIOLATION: Tested lead concentration ({lead_ppm} ppm) exceeds RoHS maximum threshold ({max_lead} ppm)",
+            if data.get("lead_exemption_cited"):
+                violations.append(
+                    RuleViolation(
+                        code="LEAD_EXEMPTION_CLAIMED",
+                        severity_score=60,
+                        message=(
+                            f"Measured lead ({lead_ppm} ppm) exceeds {max_lead} ppm, but the "
+                            f"document cites a RoHS exemption — verify the exemption applies "
+                            f"before treating this as a violation."
+                        ),
+                    )
                 )
+            else:
+                violations.append(
+                    RuleViolation(
+                        code="LEAD_EXCESS_VIOLATION",
+                        severity_score=95,
+                        message=f"VIOLATION: Tested lead concentration ({lead_ppm} ppm) exceeds RoHS maximum threshold ({max_lead} ppm)",
+                    )
+                )
+    if doc_type == "lab_test_report" and statuses.get("tested_lead_ppm") != "present":
+        violations.append(
+            RuleViolation(
+                code="NO_MEASURED_LEAD_VALUE",
+                severity_score=55,
+                message="WARNING: Lab test report contains no measured lead (Pb) value",
             )
-
+        )
+        
     # Check 6: Expiration Date & Expiring Soon (30 days window)
     if statuses.get("expiration_date") == "present" and exp_date_str:
         try:

@@ -85,7 +85,12 @@ class ExtractedCertificateData(BaseModel):
 
     tested_lead_ppm: float | None = Field(
         default=None,
-        description="Actual measured lead concentration in ppm. Never populate with a statutory limit."
+        description=(
+            "Actual measured lead concentration in ppm. "
+            "Convert scientific notation correctly before returning the number. "
+            "Example: 2.93×10^4 mg/kg = 29300 ppm. "
+            "Never populate this field with a statutory/legal limit."
+        ),
     )
 
     is_statutory_limit: bool = Field(
@@ -96,6 +101,16 @@ class ExtractedCertificateData(BaseModel):
         ),
     )
 
+    lead_exemption_cited: bool = Field(
+        default=False,
+        description=(
+            "True only if the document explicitly cites a RoHS exemption (e.g. Annex III "
+            "or Annex IV, such as 'exemption 6(c) — copper alloy containing up to 4% lead') "
+            "that applies to the measured tested_lead_ppm value. False if no exemption is "
+            "mentioned, even when the measured value is high."
+        ),
+    )
+    
     @field_validator("issue_date", "expiration_date", mode="before")
     @classmethod
     def sanitize_date_strings(cls, v):
