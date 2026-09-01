@@ -29,65 +29,89 @@ class DocumentClassification(BaseModel):
 # ==========================================
 
 class ExtractedCertificateData(BaseModel):
-    """Structured extraction target model for raw certificate PDF text.
+    """Canonical document extraction schema."""
 
-    NOTE: there is no `sku_code` field here on purpose. Your *internal* SKU code
-    (e.g. "SKU-ELEC-9001") is something you assign after the fact by cross-referencing
-    the manufacturer's part/model numbers against your catalog — it will never appear
-    inside a supplier's PDF, so asking the LLM to extract it just forces a guess or an
-    endless reconciliation loop. Instead we extract `covered_part_numbers` (what the
-    document actually prints — model numbers, part numbers, product series) and resolve
-    the internal SKU deterministically in `resolve_sku_node`, matching your n8n workflow's
-    "Auto SKU Matcher" pattern and acceptance criteria AC-10/AC-11.
-    """
+    document_classification: Literal[
+        "DECLARATION_OF_CONFORMITY",
+        "LAB_TEST_REPORT",
+        "UNKNOWN",
+    ] = Field(
+        default="UNKNOWN",
+        description="Classification of the source document."
+    )
+
+    certificate_id: str | None = Field(
+        default=None,
+        description="Certificate/report/document identifier if explicitly stated."
+    )
+
+    supplier_name: str | None = Field(
+        default=None,
+        description="Manufacturer or supplier name exactly as stated in the document."
+    )
+
+    issuing_lab: str | None = Field(
+        default=None,
+        description="Testing laboratory named in the document, if applicable."
+    )
+
+    accreditation_id: str | None = Field(
+        default=None,
+        description="Laboratory accreditation identifier, if explicitly stated."
+    )
+
+    issue_date: str | None = Field(
+        default=None,
+        description="Document issue date in YYYY-MM-DD format if stated."
+    )
+
+    expiration_date: str | None = Field(
+        default=None,
+        description="Expiration/valid-until date in YYYY-MM-DD format if explicitly stated."
+    )
+
     covered_part_numbers: list[str] = Field(
         default_factory=list,
         description=(
-            "ALL manufacturer model numbers, part numbers, SKUs, or product series printed "
-            "in the document (headers, footers, tables, or body text). If a family/series code "
-            "is given (e.g. 'ENV-IQ-AM1-240', 'UNO-C01X001'), extract every listed variant. "
-            "If no alphanumeric code is present, extract the primary product name/title instead "
-            "of returning an empty list."
-        )
+            "Manufacturer model numbers, part numbers, product-family codes, "
+            "or covered variants explicitly stated in the document."
+        ),
     )
-    issue_date: str | None = Field(
-        default=None,
-        description="Date document was issued in YYYY-MM-DD format."
-    )
-    expiration_date: str | None = Field(
-        default=None,
-        description="Date document expires in YYYY-MM-DD format."
-    )
-    accreditation_id: str | None = Field(
-        default=None,
-        description="Testing laboratory accreditation identifier (e.g., DAKKS-12345, CNAS-L0001)."
-    )
+
     standards_tested: list[str] = Field(
         default_factory=list,
-        description="List of compliance standards or directives cited."
+        description="Standards, directives, or regulations explicitly cited."
     )
+
     tested_lead_ppm: float | None = Field(
         default=None,
-        description="Measured lead concentration value in parts per million (ppm)."
+        description="Actual measured lead concentration in ppm. Never populate with a statutory limit."
     )
+
     is_statutory_limit: bool = Field(
         default=False,
-        description="Set to True ONLY if tested_lead_ppm is a legal limit/threshold, NOT a measured lab value."
+        description=(
+            "True only when the extracted ppm value is a legal/statutory threshold "
+            "rather than an actual measured result."
+        ),
     )
 
     @field_validator("issue_date", "expiration_date", mode="before")
     @classmethod
-    def sanitize_date_strings(cls, v: str | None) -> str | None:
-        if not v or str(v).lower() in ["n/a", "none", "null", "unknown", "undefined"]:
+    def sanitize_date_strings(cls, v):
+        if v is None:
             return None
-        return v
+        if str(v).strip().lower() in {
+            "", "n/a", "none", "null", "unknown", "not stated", "not applicable"
+        }:
+            return None
+        return str(v)
 
     @field_validator("covered_part_numbers", mode="before")
     @classmethod
     def sanitize_part_numbers(cls, v):
         if not v:
             return []
-        # Guard against the LLM occasionally returning a single string instead of a list
         if isinstance(v, str):
             return [v]
         return v
