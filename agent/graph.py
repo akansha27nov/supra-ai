@@ -6,6 +6,7 @@ from typing import Any, Literal, TypedDict
 
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
+from langsmith import traceable
 
 from agent.schemas import (
     AuditResult,
@@ -110,6 +111,7 @@ def match_sku(covered_part_numbers: list[str], sku_catalog: dict[str, dict[str, 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
 
 
+@traceable(name="certificate_information_extraction", run_type="chain")
 def extract_node(state: AuditState) -> dict[str, Any]:
     structured_llm = llm.with_structured_output(ExtractedCertificateData)
 
@@ -137,6 +139,7 @@ Document:
     }
 
 
+@traceable(name="document_type_classification", run_type="chain")
 def classify_doc_type_node(state: AuditState) -> dict[str, Any]:
     structured_llm = llm.with_structured_output(DocumentClassification)
     raw_text = state.get("raw_text") or ""
@@ -197,6 +200,7 @@ def validate_fields_node(state: AuditState) -> dict[str, Any]:
     }
 
 
+@traceable(name="targeted_field_reconciliation", run_type="chain")
 def reconcile_node(state: AuditState) -> dict[str, Any]:
     """Targeted re-extraction attempting to resolve absent_expected/ambiguous fields."""
     import json

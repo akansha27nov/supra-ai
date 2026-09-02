@@ -88,6 +88,19 @@ def _corrupted_file_result(file_path: Path) -> dict:
     }
 
 
+def _infer_data_source_tag(file_path: Path) -> str:
+    """Tags each LangSmith trace with where its input document came from, so real-world
+    test runs and synthetic sample-data runs can be told apart / filtered in the
+    LangSmith UI — this is what actually proves every real-world file was traced,
+    not just that tracing exists somewhere in the codebase."""
+    path_str = str(file_path).replace("\\", "/").lower()
+    if "real_world" in path_str:
+        return "real_world_data"
+    if "sample_pdfs" in path_str:
+        return "sample_data"
+    return "unknown_source"
+
+
 def audit_file(file_path: Path, sku_catalog: dict, associated_sku: str | None = None) -> dict:
     print(f"\n--- Auditing: {file_path.name} ---")
     raw_text = extract_raw_pdf_text(str(file_path))
@@ -112,7 +125,15 @@ def audit_file(file_path: Path, sku_catalog: dict, associated_sku: str | None = 
         "audit_result": None,
     }
 
-    result = graph.invoke(initial_state)
+    data_source = _infer_data_source_tag(file_path)
+    result = graph.invoke(
+        initial_state,
+        config={
+            "run_name": f"audit_{file_path.name}",
+            "tags": [data_source],
+            "metadata": {"file_name": file_path.name, "data_source": data_source},
+        },
+    )
     result.setdefault("file_name", file_path.name)  # defensive: state should already carry this
 
     print(f"Document Type: {result.get('doc_type')}")
@@ -207,6 +228,10 @@ def append_to_master_csv(results: list, output_dir: Path = Path("logs")) -> Path
             file_name = res.get("file_name", "Unknown")
             sku = res.get("associated_sku") or "UNMATCHED"
             sku_match = res.get("sku_match_status", "not_attempted")
+
+            # supplier_name lives in the extraction schema (agent/schemas.py) — it was
+            # already being extracted, just never persisted to the ledger, so it fell
+            # back to "Unknown Supplier" everywhere in the UI regardless of the document.
             extracted = res.get("extracted", {}) or {}
             supplier = extracted.get("supplier_name") or "Unknown Supplier"
 

@@ -10,10 +10,12 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
+from langsmith import traceable
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
 
 
+@traceable(name="generate_supplier_gap_notice", run_type="chain")
 def generate_supplier_gap_notice(
     audit_result: dict,
     extracted_data: dict,

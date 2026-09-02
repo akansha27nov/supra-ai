@@ -53,6 +53,9 @@ def _migrate_ledger_columns() -> None:
         df.insert(0, "RecordID", [str(uuid.uuid4()) for _ in range(len(df))])
         changed = True
     if "Supplier" not in df.columns:
+        # Backfilling real supplier names for historic rows would need re-parsing the
+        # source PDFs, which we don't have handles to here — mark them explicitly
+        # rather than silently leaving a blank cell.
         df["Supplier"] = "Unknown Supplier"
         changed = True
     if "ReviewStatus" not in df.columns:
@@ -116,7 +119,14 @@ async def audit_uploaded_pdf(file: UploadFile = File(...)):   # noqa: B008
         "audit_result": None,
     }
 
-    result = graph.invoke(initial_state)
+    result = graph.invoke(
+        initial_state,
+        config={
+            "run_name": f"audit_{file.filename}",
+            "tags": ["live_upload"],
+            "metadata": {"file_name": file.filename, "data_source": "live_upload"},
+        },
+    )
 
     # Defensive passthrough fields — graph nodes may not set these,
     # but append_to_master_csv reads them from the result dict.
