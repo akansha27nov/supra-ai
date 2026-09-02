@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
+import { exportAuditLogsToCSV } from "@/lib/exportUtils";
 import { fetchAuditLogs, AuditLog } from '@/lib/api';
 
 export default function AnalyticsDashboard() {
@@ -22,6 +23,10 @@ export default function AnalyticsDashboard() {
     };
     loadLogs();
   }, []);
+
+  const handleExport = () => {
+    exportAuditLogsToCSV(logs, "portfolio-analytics-report.csv");
+  };
 
   // --- DYNAMIC CALCULATIONS ---
   const totalLogs = logs.length;
@@ -94,7 +99,8 @@ export default function AnalyticsDashboard() {
               <p className="text-sm text-on-surface-variant mt-0.5 font-body-md">High-level compliance overview and procurement intelligence.</p>
             </div>
             <div className="flex gap-2">
-              <button className="flex items-center gap-2 bg-surface-container-highest text-on-surface px-4 py-2 rounded text-sm font-medium border border-outline-variant hover:bg-surface-container transition-colors shadow-sm">
+              <button onClick={handleExport}
+                className="flex items-center gap-2 bg-surface-container-highest text-on-surface px-4 py-2 rounded text-sm font-medium border border-outline-variant hover:bg-surface-container transition-colors shadow-sm">
                   <span className="material-symbols-outlined" data-icon="download" style={{ fontSize: '18px' }}>download</span>
                   Export Report
               </button>

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
+import { exportAuditLogsToCSV } from "@/lib/exportUtils";
 import { fetchAuditLogs, AuditLog, uploadAuditDocument, generateGapNotice, submitReviewDecision } from '@/lib/api';
 import { Plus, FileUp, ShieldCheck, AlertCircle, FileText, CheckCircle2, XCircle, X } from 'lucide-react';
 
@@ -54,6 +55,10 @@ export default function DashboardPage() {
 
   const getDecision = (log: AuditLog): string => {
     return String(log.Decision || "").trim().toUpperCase();
+  };
+
+  const handleExport = () => {
+    exportAuditLogsToCSV(logs, "procurement-compliance-dashboard.csv");
   };
 
   // Helper to resolve effective decision (prioritizes human ReviewStatus over AI Decision)
@@ -539,9 +544,11 @@ export default function DashboardPage() {
             </div>
             {/* CTA */}
             <div className="flex gap-2">
-              <button className="flex items-center gap-2 bg-surface-container-highest text-on-surface px-4 py-2 rounded text-sm font-medium border border-outline-variant hover:bg-surface-container transition-colors shadow-sm">
+              <button onClick={handleExport}
+                className="flex items-center gap-2 bg-surface-container-highest text-on-surface px-4 py-2 rounded text-sm font-medium border border-outline-variant hover:bg-surface-container transition-colors shadow-sm"
+              >
                 <span className="material-symbols-outlined" data-icon="download" style={{ fontSize: '18px' }}>download</span>
-                  Export Report
+                Export Report
               </button>
               {/* Trigger for the modal */}
               <button 

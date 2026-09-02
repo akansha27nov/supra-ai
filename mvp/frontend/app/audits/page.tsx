@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import { fetchAuditLogs, AuditLog } from '@/lib/api';
+import { exportAuditLogsToCSV } from '@/lib/exportUtils';
 
 export default function AuditsPage() {
   const router = useRouter();
@@ -37,6 +38,11 @@ export default function AuditsPage() {
   });
 
   const pendingCount = logs.filter(l => l.Decision === "MANUAL_REVIEW" || !l.Decision).length;
+
+  // --- Export Handler ---
+  const handleExport = () => {
+    exportAuditLogsToCSV(filteredLogs, "audit-queue-report.csv");
+  };
 
   return (
     <div className="bg-background text-on-background font-body-md min-h-screen flex antialiased selection:bg-primary-container selection:text-on-primary-container">
@@ -98,7 +104,10 @@ export default function AuditsPage() {
             </div>
             {/* Bulk Actions */}
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 px-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg font-body-md text-body-md font-medium text-on-surface hover:bg-surface-container-low transition-colors shadow-sm">
+              <button 
+                onClick={handleExport}
+                className="flex items-center gap-2 px-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg font-body-md text-body-md font-medium text-on-surface hover:bg-surface-container-low transition-colors shadow-sm"
+              >
                 <span className="material-symbols-outlined" data-icon="download" style={{ fontSize: '18px' }}>download</span>
                 Export Report
               </button>
