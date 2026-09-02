@@ -5,7 +5,7 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-
+import uuid
 import pdfplumber
 from dotenv import load_dotenv
 from pdfminer.pdfparser import PDFSyntaxError
@@ -167,20 +167,42 @@ def save_markdown_log(results: list, output_dir: Path = Path("logs")) -> Path:
 
 
 def append_to_master_csv(results: list, output_dir: Path = Path("logs")) -> Path:
-    """Appends audit results to a master CSV ledger for chat/programmatic querying."""
+    """Append audit results to the master CSV ledger.
+
+    Every result receives a stable RecordID and starts with ReviewStatus=PENDING.
+    The generated RecordID is also written back onto the result dict so API
+    callers can immediately use it for human review.
+    """
+
     output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = output_dir / "master_audit_ledger.csv"
 
     file_exists = csv_path.exists()
-    current_time_str = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+    current_time_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     with open(csv_path, mode="a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
 
         if not file_exists:
-            writer.writerow(["Timestamp", "File Name", "Associated SKU", "SKU Match Status", "Decision", "Score", "Flags"])
+            writer.writerow([
+                "RecordID",
+                "Timestamp",
+                "File Name",
+                "Associated SKU",
+                "SKU Match Status",
+                "Decision",
+                "Score",
+                "Flags",
+                "ReviewStatus",
+                "Reviewer",
+            ])
 
         for res in results:
+            record_id = res.get("record_id") or str(uuid.uuid4())
+
+            # Make the ID available to API callers as well as the CSV.
+            res["record_id"] = record_id
+
             file_name = res.get("file_name", "Unknown")
             sku = res.get("associated_sku") or "UNMATCHED"
             sku_match = res.get("sku_match_status", "not_attempted")
@@ -191,15 +213,29 @@ def append_to_master_csv(results: list, output_dir: Path = Path("logs")) -> Path
 
             flags = audit_res.get("flags", [])
             flag_msgs = []
+
             for flg in flags:
                 if isinstance(flg, dict):
-                    flag_msgs.append(f"{flg.get('code')}: {flg.get('message')}")
+                    flag_msgs.append(
+                        f"{flg.get('code')}: {flg.get('message')}"
+                    )
                 else:
                     flag_msgs.append(str(flg))
 
             flags_str = " | ".join(flag_msgs) if flag_msgs else "None"
 
-            writer.writerow([current_time_str, file_name, sku, sku_match, decision, score, flags_str])
+            writer.writerow([
+                record_id,
+                current_time_str,
+                file_name,
+                sku,
+                sku_match,
+                decision,
+                score,
+                flags_str,
+                "PENDING",
+                "",
+            ])
 
     print(f"[INFO] Master CSV ledger updated: {csv_path.resolve()}")
     return csv_path

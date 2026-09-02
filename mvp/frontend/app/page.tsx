@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
-import { fetchAuditLogs, AuditLog, uploadAuditDocument } from '@/lib/api';
+import { fetchAuditLogs, AuditLog, uploadAuditDocument, generateGapNotice, submitReviewDecision } from '@/lib/api';
 import { Plus, FileUp, ShieldCheck, AlertCircle, FileText, CheckCircle2, XCircle, X } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -21,6 +20,68 @@ export default function DashboardPage() {
   const [auditResult, setAuditResult] = useState<any | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // --- Gap Notice State ---
+  // The draft is generated on demand (not automatically) since it costs an LLM call —
+  // only fetch it once the reviewer actually wants to see it.
+  const [gapNotice, setGapNotice] = useState<string | null>(null);
+  const [gapNoticeLoading, setGapNoticeLoading] = useState(false);
+  const [gapNoticeError, setGapNoticeError] = useState<string | null>(null);
+
+  const [reviewLoadingId, setReviewLoadingId] = useState<string | null>(null);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewer, setReviewer] = useState("Executive Reviewer");
+
+  const handleGenerateGapNotice = async () => {
+    if (!auditResult) return;
+    setGapNoticeLoading(true);
+    setGapNoticeError(null);
+    try {
+      const { draft } = await generateGapNotice({
+        audit_result: auditResult.audit_result || {},
+        extracted: auditResult.extracted || {},
+        supplier_name: auditResult.extracted?.supplier_name || "Supplier",
+        associated_sku: auditResult.associated_sku ?? null,
+      });
+      setGapNotice(draft);
+    } catch (err) {
+      console.error("Failed to generate gap notice:", err);
+      setGapNoticeError("Couldn't generate a gap notice. Try again.");
+    } finally {
+      setGapNoticeLoading(false);
+    }
+  };
+
+  const getDecision = (log: AuditLog): string => {
+    return String(log.Decision || "").trim().toUpperCase();
+  };
+
+  // Helper to resolve effective decision (prioritizes human ReviewStatus over AI Decision)
+  const getEffectiveDecision = (log: AuditLog): string => {
+    const reviewStatus = String(log.ReviewStatus || "").trim().toUpperCase();
+    if (reviewStatus === "APPROVED" || reviewStatus === "REJECTED") {
+      return reviewStatus;
+    }
+    return String(log.Decision || "").trim().toUpperCase();
+  };
+
+ const needsReview = (log: AuditLog): boolean => {
+    const reviewStatus = String(log.ReviewStatus || "").trim().toUpperCase();
+    
+    // Early return: if a human already approved or rejected, it never needs review
+    if (reviewStatus === "APPROVED" || reviewStatus === "REJECTED") {
+      return false;
+    }
+
+    const decision = getDecision(log);
+    return (
+      decision === "REQUIRES_HUMAN_REVIEW" ||
+      decision === "NEEDS_REVIEW" ||
+      decision === "NEEDS HUMAN REVIEW" ||
+      reviewStatus === "PENDING" ||
+      reviewStatus === ""
+    );
+  };
 
   // 1. Fetch data using the centralized API function
   const loadLogs = async () => {
@@ -75,66 +136,136 @@ export default function DashboardPage() {
     }, 200); 
   };
 
+  const handleReviewDecision = async (
+    recordId: string,
+    decision: "APPROVED" | "REJECTED"
+  ) => {
+    if (!recordId) {
+      setReviewError("This audit does not have a Record ID.");
+      return;
+    }
+
+    setReviewLoadingId(recordId);
+    setReviewError(null);
+
+    try {
+      await submitReviewDecision(recordId, decision, reviewer);
+
+      // Immediately update the table/KPIs without requiring a page refresh.
+      setLogs(prev =>
+        prev.map(log =>
+          log.RecordID === recordId
+            ? {
+                ...log,
+                ReviewStatus: decision,
+                Reviewer: reviewer,
+              }
+            : log
+        )
+      );
+
+      // Keep the currently displayed audit result consistent.
+      setAuditResult((prev: any) =>
+        prev
+          ? {
+              ...prev,
+              review_status: decision,
+              reviewer,
+            }
+          : prev
+      );
+    } catch (error: any) {
+      console.error("Failed to submit review decision:", error);
+      setReviewError(
+        error?.message || "Failed to save the review decision."
+      );
+    } finally {
+      setReviewLoadingId(null);
+    }
+  };
+
   // Helper to format the backend decision into your UI badges
-  const renderStatusBadge = (decision: string) => {
-    if (decision === "APPROVED") {
+  const renderStatusBadge = (log: AuditLog) => {
+    const decision = getDecision(log);
+    const reviewStatus = String(log.ReviewStatus || "").toUpperCase();
+
+    if (reviewStatus === "APPROVED") {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full bg-tertiary-container/10 text-tertiary font-medium text-xs gap-1 border border-tertiary/20">
-          <span className="material-symbols-outlined text-[12px]">check_circle</span> Verified
-        </span>
-      );
-    } else if (decision === "REJECTED") {
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full bg-error-container/20 text-error font-medium text-xs gap-1 border border-error/20">
-          <span className="material-symbols-outlined text-[12px]">error</span> Rejected
-        </span>
-      );
-    } else if (decision === "FLAGGED") {
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-medium text-xs gap-1 border border-amber-300">
-          <span className="material-symbols-outlined text-[12px]">warning</span> Flagged
-        </span>
-      );
-    } else if (decision === "REQUIRES_HUMAN_REVIEW") {
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full bg-red-600 text-white font-bold text-xs gap-1 border-2 border-red-800 animate-pulse shadow-sm">
-          <span className="material-symbols-outlined text-[12px]">priority_high</span> Human Review
-        </span>
-      );
-    } else {
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full bg-secondary-container/20 text-on-surface font-medium text-xs gap-1 border border-outline-variant">
-          <span className="material-symbols-outlined text-[12px]">sync</span> Processing
+          <CheckCircle2 size={12} />
+          Approved
         </span>
       );
     }
+
+    if (reviewStatus === "REJECTED") {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded-full bg-error-container/20 text-error font-medium text-xs gap-1 border border-error/20">
+          <XCircle size={12} />
+          Rejected
+        </span>
+      );
+    }
+
+    if (needsReview(log)) {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded-full bg-red-600 text-white font-bold text-xs gap-1 border-2 border-red-800 animate-pulse shadow-sm">
+          <AlertCircle size={12} />
+          Needs Review
+        </span>
+      );
+    }
+
+    if (decision === "FLAGGED") {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-medium text-xs gap-1 border border-amber-300">
+          <AlertCircle size={12} />
+          Flagged
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-center px-2 py-1 rounded-full bg-secondary-container/20 text-on-surface font-medium text-xs gap-1 border border-outline-variant">
+        Processing
+      </span>
+    );
   };
 
   // --- DYNAMIC CALCULATIONS ---
   const totalLogs = logs.length;
-  const approvedCount = logs.filter(log => log.Decision === "APPROVED").length;
+  // Update metric calculations:
+  const approvedCount = logs.filter(log => getEffectiveDecision(log) === "APPROVED").length;
   const complianceRate = totalLogs ? ((approvedCount / totalLogs) * 100).toFixed(1) : "0.0";
   
-  const pendingCount = logs.filter(log => log.Decision === "REQUIRES_HUMAN_REVIEW").length;
-  const highRiskCount = logs.filter(log => log.Decision === "REJECTED").length;
-
+  const highRiskCount = logs.filter(log => getEffectiveDecision(log) === "REJECTED").length;
+  
+  // Inside monthly chart data aggregation:
+  // const monthApproved = logs.filter(log => getEffectiveDecision(log) === "APPROVED").length;
+  
+  // Critical alerts:
+  const criticalAlerts = logs.filter(log => getEffectiveDecision(log) === "REJECTED" && Number(log.Score) >= 80).slice(0, 3);
+  const pendingCount = logs.filter(needsReview).length;
+  
   // Risk Distribution Tally based on rejected log flags
-  const rejectedLogs = logs.filter(log => log.Decision === "REJECTED");
-  const riskCounts = { RoHS: 0, REACH: 0, CE: 0, ConflictMinerals: 0 };
+  const rejectedLogs = logs.filter(log => getEffectiveDecision(log) === "REJECTED" || getDecision(log) === "FLAGged" || needsReview(log));
+  const riskCounts = { RoHS: 0, REACH: 0, CE: 0, ConflictMinerals: 0, Other: 0 };
   
   rejectedLogs.forEach(log => {
     const flags = (log.Flags || "").toUpperCase();
     if (flags.includes("ROHS") || flags.includes("LEAD") || flags.includes("EXPIRED")) riskCounts.RoHS++;
-    if (flags.includes("REACH") || flags.includes("SUBSTANCE")) riskCounts.REACH++;
-    if (flags.includes("CE") || flags.includes("STANDARD") || flags.includes("SAFETY")) riskCounts.CE++;
-    if (flags.includes("CONFLICT") || flags.includes("MINERAL")) riskCounts.ConflictMinerals++;
+    else if (flags.includes("REACH") || flags.includes("SUBSTANCE")) riskCounts.REACH++;
+    else if (flags.includes("CE") || flags.includes("STANDARD") || flags.includes("SAFETY")) riskCounts.CE++;
+    else if (flags.includes("CONFLICT") || flags.includes("MINERAL")) riskCounts.ConflictMinerals++;
+    else riskCounts.Other++; // Captures SKU mismatches and other operational flags safely
   });
 
   const totalRisks = Object.values(riskCounts).reduce((a, b) => a + b, 0) || 1;
   const rohsPercent = Math.round((riskCounts.RoHS / totalRisks) * 100);
   const reachPercent = Math.round((riskCounts.REACH / totalRisks) * 100);
   const cePercent = Math.round((riskCounts.CE / totalRisks) * 100);
-  const conflictPercent = 100 - (rohsPercent + reachPercent + cePercent);
+  const conflictPercent = Math.round((riskCounts.ConflictMinerals / totalRisks) * 100);
+  const otherPercent = Math.round((riskCounts.Other / totalRisks) * 100);
 
   // 6-Month Compliance Chart Data Grouping
   const now = new Date();
@@ -153,13 +284,10 @@ export default function DashboardPage() {
       return !isNaN(logDate.getTime()) && logDate.getFullYear() === m.year && logDate.getMonth() === m.month;
     });
     if (monthLogs.length === 0) return { name: m.name, rate: 0 };
-    const monthApproved = monthLogs.filter(log => log.Decision === "APPROVED").length;
+    const monthApproved = monthLogs.filter(log => getEffectiveDecision(log) === "APPROVED").length;
     const rate = Math.round((monthApproved / monthLogs.length) * 100);
     return { name: m.name, rate };
   });
-
-  // Critical Priority Actions Feed
-  const criticalAlerts = logs.filter(log => log.Decision === "REJECTED" && Number(log.Score) >= 80).slice(0, 3);
 
   // Pagination Calculations
   const totalPages = Math.ceil(logs.length / ITEMS_PER_PAGE) || 1;
@@ -252,11 +380,67 @@ export default function DashboardPage() {
                           : "No compliance infractions flagged."}
                       </div>
                     </div>
-                    <div className="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant flex flex-col gap-2">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant font-label-caps">AI Gap Notice</h4>
-                      <p className="text-sm text-on-surface leading-relaxed font-body-md">
-                        {auditResult.audit_result?.decision === 'APPROVED' ? "The document successfully passed evaluation." : "Review flagged items."}
-                      </p>
+                    <div className="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant font-label-caps">
+                          Supplier Gap Notice
+                        </h4>
+
+                        <FileText size={16} className="text-primary" />
+                      </div>
+
+                      {!gapNotice ? (
+                        <>
+                          <p className="text-sm text-on-surface leading-relaxed font-body-md">
+                            Generate a draft supplier email explaining the compliance gaps
+                            identified by the audit.
+                          </p>
+
+                          <button
+                            onClick={handleGenerateGapNotice}
+                            disabled={gapNoticeLoading}
+                            className="w-full px-3 py-2 rounded-lg bg-primary text-on-primary text-sm font-medium hover:bg-surface-tint disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          >
+                            {gapNoticeLoading ? (
+                              <>
+                                <span className="w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin" />
+                                Generating Draft...
+                              </>
+                            ) : (
+                              <>
+                                <FileText size={16} />
+                                Generate Gap Notice
+                              </>
+                            )}
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <textarea
+                            value={gapNotice}
+                            onChange={e => setGapNotice(e.target.value)}
+                            rows={8}
+                            className="w-full rounded-lg border border-outline-variant bg-surface-container p-3 text-sm text-on-surface resize-y focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          />
+
+                          <p className="text-[11px] text-on-surface-variant">
+                            Draft only — review and edit before sending to the supplier.
+                          </p>
+
+                          <button
+                            onClick={() => setGapNotice(null)}
+                            className="self-start px-3 py-1.5 rounded-lg border border-outline-variant text-xs font-medium text-on-surface hover:bg-surface-container"
+                          >
+                            Regenerate
+                          </button>
+                        </>
+                      )}
+
+                      {gapNoticeError && (
+                        <p className="text-xs text-error">
+                          {gapNoticeError}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -272,6 +456,56 @@ export default function DashboardPage() {
                 <button onClick={resetAndCloseModal} className="px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-medium hover:bg-surface-tint transition-colors shadow-sm">
                   Done
                 </button>
+              </div>
+            )}
+
+            {auditResult?.record_id && (
+              <div className="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                      Human Review
+                    </h4>
+
+                    <p className="text-sm text-on-surface mt-1">
+                      {auditResult.review_status
+                        ? `Decision saved as ${auditResult.review_status}.`
+                        : "AI analysis is complete. A human reviewer must make the final decision."}
+                    </p>
+                  </div>
+
+                  {!auditResult.review_status && (
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        onClick={() =>
+                          handleReviewDecision(auditResult.record_id, "APPROVED")
+                        }
+                        disabled={reviewLoadingId === auditResult.record_id}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-tertiary text-white text-sm font-medium hover:opacity-90 disabled:opacity-50"
+                      >
+                        <CheckCircle2 size={16} />
+                        Approve
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          handleReviewDecision(auditResult.record_id, "REJECTED")
+                        }
+                        disabled={reviewLoadingId === auditResult.record_id}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-error text-white text-sm font-medium hover:opacity-90 disabled:opacity-50"
+                      >
+                        <XCircle size={16} />
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {reviewError && (
+                  <div className="mt-3 p-2.5 rounded-lg bg-error-container/20 border border-error/20 text-error text-xs">
+                    {reviewError}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -432,7 +666,7 @@ export default function DashboardPage() {
             {/* Risk Distribution */}
             <div className="bg-surface-container-lowest rounded-lg border border-surface-variant p-4 flex flex-col shadow-sm">
               <h3 className="text-[18px] font-semibold text-on-surface mb-4 border-b border-surface-variant pb-3 font-headline-sm">Risk Distribution</h3>
-              <div className="flex-1 flex flex-col justify-center gap-5">
+              <div className="flex-1 flex flex-col justify-center gap-4">
                 <div>
                   <div className="flex justify-between items-center mb-1 text-sm font-body-md">
                     <span className="text-on-surface">RoHS Compliance</span>
@@ -462,11 +696,20 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <div className="flex justify-between items-center mb-1 text-sm font-body-md">
-                    <span className="text-error font-medium">Conflict Minerals</span>
-                    <span className="font-bold text-error">{conflictPercent}%</span>
+                    <span className="text-on-surface font-medium">Conflict Minerals</span>
+                    <span className="font-bold">{conflictPercent}%</span>
                   </div>
                   <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
-                    <div className="bg-error h-full rounded-full transition-all duration-500" style={{ width: `${conflictPercent}%` }}></div>
+                    <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: `${conflictPercent}%` }}></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-1 text-sm font-body-md">
+                    <span className="text-on-surface-variant font-medium">Other / SKU Mismatch</span>
+                    <span className="font-bold text-on-surface-variant">{otherPercent}%</span>
+                  </div>
+                  <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+                    <div className="bg-outline h-full rounded-full transition-all duration-500" style={{ width: `${otherPercent}%` }}></div>
                   </div>
                 </div>
               </div>
@@ -506,7 +749,39 @@ export default function DashboardPage() {
                             <td className="py-3 px-4 text-on-surface-variant">{log["SKU"] || "Unknown"}</td>
                             <td className="py-3 px-4 text-on-surface-variant text-xs">{dateStr}</td>
                             <td className="py-3 px-4">
-                              {renderStatusBadge(log["Decision"])}
+                              <div className="flex flex-col gap-2">
+                                {renderStatusBadge(log)}
+
+                                {needsReview(log) && (
+                                  <div className="flex gap-1.5">
+                                    <button
+                                      onClick={() =>
+                                        handleReviewDecision(log.RecordID, "APPROVED")
+                                      }
+                                      disabled={reviewLoadingId === log.RecordID}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-tertiary text-white text-xs font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {reviewLoadingId === log.RecordID ? (
+                                        <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                      ) : (
+                                        <CheckCircle2 size={13} />
+                                      )}
+                                      Approve
+                                    </button>
+
+                                    <button
+                                      onClick={() =>
+                                        handleReviewDecision(log.RecordID, "REJECTED")
+                                      }
+                                      disabled={reviewLoadingId === log.RecordID}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-error text-white text-xs font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      <XCircle size={13} />
+                                      Reject
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );

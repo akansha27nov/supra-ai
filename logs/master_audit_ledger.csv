@@ -1,2 +1,5 @@
-Timestamp,File Name,Associated SKU,SKU Match Status,Decision,Score,Flags
-2026-09-02 06:07:56 UTC,Sharp HT-SB121 Soundbar — DoC.pdf,UNMATCHED,unmatched,FLAGGED,50,NO_SKU_MATCH: Extracted part numbers did not match any catalog SKU
+RecordID,Timestamp,File Name,Associated SKU,SKU Match Status,Decision,Score,Flags,ReviewStatus,Reviewer
+b5025b02-2d78-4408-ace0-4b3ac1b6f26e,2026-09-02 06:07:56 UTC,Sharp HT-SB121 Soundbar — DoC.pdf,UNMATCHED,unmatched,FLAGGED,50,NO_SKU_MATCH: Extracted part numbers did not match any catalog SKU,APPROVED,Executive Reviewer
+ec80836f-183b-45e8-97f0-27d11eb1de34,2026-09-02 08:06:56 UTC,Bowers & Wilkins Px7 S3 Headphones — DoC.pdf,UNMATCHED,unmatched,FLAGGED,50,NO_SKU_MATCH: Extracted part numbers did not match any catalog SKU,REJECTED,Executive Reviewer
+1bce18f0-8373-4a69-bbc0-a4f8a3a81ba8,2026-09-02 08:29:36 UTC,Amazon Car Phone Mount — RoHS Lab Report.pdf,UNMATCHED,unmatched,FLAGGED,75,OLD_ISSUE_DATE: WARNING: Document issue date is older than 2 years baseline | NO_SKU_MATCH: Extracted part numbers did not match any catalog SKU | UNACCREDITED_LABORATORY: No accreditation ID present,APPROVED,Executive Reviewer
+ce5333a0-b4d7-4ea1-85ae-46987e480c1c,2026-09-02 08:42:50 UTC,RoHS_REACH_PROP65_Declaration_of_Conformity.pdf,UNMATCHED,unmatched,FLAGGED,50,NO_SKU_MATCH: Extracted part numbers did not match any catalog SKU,APPROVED,Executive Reviewer
