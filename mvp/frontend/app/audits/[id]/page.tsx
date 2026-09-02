@@ -33,11 +33,13 @@ export default function AuditDetailPage() {
     const loadAudit = async () => {
       try {
         const logs = await fetchAuditLogs();
-        const found = logs.find(
-          (l, idx) => l.RecordID === auditId || String(idx + 1) === auditId
-        ) || logs[0];
+        // RecordID is now a stable UUID for every row (see agent/run_pdf.py), so this
+        // should always be an exact match. No more index-based fallback matching, and
+        // no more falling back to logs[0] when nothing matches — that was silently
+        // showing a random unrelated record instead of the "not found" state below.
+        const found = logs.find((l) => l.RecordID === auditId) || null;
 
-        setAudit(found || null);
+        setAudit(found);
         if (found) {
           const initialStatus = (found.ReviewStatus && found.ReviewStatus !== 'PENDING') 
             ? found.ReviewStatus 
@@ -53,12 +55,63 @@ export default function AuditDetailPage() {
     loadAudit();
   }, [auditId]);
 
+  // The ledger only stores flags as one joined "CODE: message | CODE: message" string,
+  // not the structured list-of-dicts the backend's gap_notice generator expects. Parse
+  // it back into that shape. The ledger also doesn't retain a per-flag severity score
+  // (only one Score for the whole row) — using the row's Score for every flag is an
+  // honest approximation, not fabricated precision, and it's only used to satisfy the
+  // backend's ">0 = actionable" check.
+  const parseFlagsForGapNotice = (flagsStr: string | undefined, fallbackScore: number) => {
+    if (!flagsStr || flagsStr.trim() === '' || flagsStr.trim().toLowerCase() === 'none') return [];
+    return flagsStr.split('|').map(s => s.trim()).filter(Boolean).map(entry => {
+      const sep = entry.indexOf(':');
+      const code = sep >= 0 ? entry.slice(0, sep).trim() : entry;
+      const message = sep >= 0 ? entry.slice(sep + 1).trim() : entry;
+      return { code, message, severity_score: fallbackScore || 1 };
+    });
+  };
+
+  // Shared by the auto-generate-on-reject flow AND the "View Draft" button, so reopening
+  // the modal after a page reload regenerates the draft instead of showing it empty.
+  const loadGapNotice = async (record: AuditLog) => {
+    setLoadingNotice(true);
+    try {
+      const validSku = record.SKU && record.SKU !== 'UNMATCHED' ? record.SKU : null;
+      const gapNoticeRes = await generateGapNotice({
+        audit_result: {
+          decision: record.Decision,
+          score: record.Score,
+          flags: parseFlagsForGapNotice(record.Flags, record.Score),
+        },
+        extracted: {
+          covered_part_numbers: validSku ? [validSku] : [],
+        },
+        supplier_name: record.Supplier || 'Supplier',
+        associated_sku: validSku,
+      });
+      setGapNoticeText(gapNoticeRes.draft);
+    } catch (gapErr) {
+      console.error('Failed to generate gap notice:', gapErr);
+      setGapNoticeText(
+        `SUPPLIER CORRECTIVE ACTION NOTICE\n\n` +
+        `Document: ${record["File Name"]}\nSupplier: ${record.Supplier || 'N/A'}\nSKU: ${record.SKU || 'N/A'}\n\n` +
+        `Reason: ${record.Flags || 'Failed compliance check.'}`
+      );
+    } finally {
+      setLoadingNotice(false);
+    }
+  };
+
   const handleApprove = async () => {
     if (!audit?.RecordID) return;
     setIsSubmitting(true);
     try {
       await submitReviewDecision(audit.RecordID, "APPROVED", "Lead Auditor");
       setCurrentDecision("APPROVED");
+      // Update the local record too, not just currentDecision — isPending reads
+      // audit.ReviewStatus, and without this it stays stale until a page reload,
+      // leaving the Approve/Reject buttons visible after a decision was already submitted.
+      setAudit(prev => prev ? { ...prev, ReviewStatus: "APPROVED", Reviewer: "Lead Auditor" } : prev);
       alert(`Audit record has been successfully APPROVED.`);
     } catch (error) {
       console.error("Failed to submit approval:", error);
@@ -74,25 +127,9 @@ export default function AuditDetailPage() {
     try {
       await submitReviewDecision(audit.RecordID, "REJECTED", "Lead Auditor");
       setCurrentDecision("REJECTED");
-      setLoadingNotice(true);
+      setAudit(prev => prev ? { ...prev, ReviewStatus: "REJECTED", Reviewer: "Lead Auditor" } : prev);
       setShowGapModal(true);
-
-      try {
-        const gapNoticeRes = await generateGapNotice({
-          audit_result: { Decision: audit.Decision, Score: audit.Score, Flags: audit.Flags },
-          extracted: { file_name: audit["File Name"], sku: audit.SKU },
-          associated_sku: audit.SKU
-        });
-        setGapNoticeText(gapNoticeRes.draft);
-      } catch (gapErr) {
-        setGapNoticeText(
-          `SUPPLIER CORRECTIVE ACTION NOTICE\n\n` +
-          `Document: ${audit["File Name"]}\nSKU: ${audit.SKU || 'N/A'}\n\n` +
-          `Reason: ${audit.Flags || 'Failed compliance check.'}`
-        );
-      } finally {
-        setLoadingNotice(false);
-      }
+      await loadGapNotice(audit);
     } catch (error) {
       alert("Failed to submit rejection.");
     } finally {
@@ -281,7 +318,12 @@ export default function AuditDetailPage() {
                 <div className="bg-surface-container-lowest p-6 rounded-lg border border-surface-variant shadow-sm flex flex-col gap-3">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-on-surface">Supplier Gap Notice Action</h3>
                   <button 
-                    onClick={() => setShowGapModal(true)}
+                    onClick={() => {
+                      setShowGapModal(true);
+                      if (!gapNoticeText && audit) {
+                        loadGapNotice(audit);
+                      }
+                    }}
                     className="flex items-center justify-center gap-2 w-full py-2.5 bg-error-container/30 text-error rounded-lg text-sm font-medium border border-error/20 hover:bg-error-container/50 transition-colors"
                   >
                     <Mail size={16} /> View Supplier Gap Notice Draft
