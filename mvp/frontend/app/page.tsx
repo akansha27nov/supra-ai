@@ -558,10 +558,6 @@ export default function DashboardPage() {
                 <Plus size={18} />
                 New Audit
               </button>
-              <button className="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded text-sm font-medium hover:bg-surface-tint transition-colors shadow-sm">
-                <span className="material-symbols-outlined" data-icon="done_all" style={{ fontSize: '18px' }}>done_all</span>
-                Run Batch Audit
-              </button>
             </div>
           </div>
 

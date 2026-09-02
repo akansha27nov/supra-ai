@@ -103,17 +103,13 @@ export default function AuditsPage() {
               </div>
             </div>
             {/* Bulk Actions */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button 
                 onClick={handleExport}
                 className="flex items-center gap-2 px-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg font-body-md text-body-md font-medium text-on-surface hover:bg-surface-container-low transition-colors shadow-sm"
               >
                 <span className="material-symbols-outlined" data-icon="download" style={{ fontSize: '18px' }}>download</span>
                 Export Report
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg font-body-md text-body-md font-medium hover:bg-surface-tint transition-colors shadow-sm">
-                <span className="material-symbols-outlined" data-icon="done_all" style={{ fontSize: '18px' }}>done_all</span>
-                Batch Approve
               </button>
             </div>
           </div>
