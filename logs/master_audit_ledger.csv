@@ -1,15 +1,2 @@
-Timestamp,File Name,SKU,Decision,Score,Flags
-2026-09-01 07:39:56 UTC,Cubot KingKong 3 Smartphone — RoHS Lab Report.pdf,KINGKONG 3,REJECTED,100,EXPIRED_CERTIFICATE: Expired on 2023-09-06 | SUSPICIOUS_LABORATORY: ID 'AGC00552180804-001' failed prefix validation
-2026-09-01 07:39:56 UTC,Bluetooth Speaker (CWS06) — RoHS Lab Report.pdf,CWS06,REJECTED,85,SUSPICIOUS_LABORATORY: ID 'QB-CH-R001 (V1.0)' failed prefix validation
-2026-09-01 07:39:56 UTC,Amazon Car Phone Mount — RoHS Lab Report.pdf,HTUCF111A1,REJECTED,100,EXPIRED_CERTIFICATE: Expired on 2025-05-30 | SUSPICIOUS_LABORATORY: ID 'LINK-T2310289R' failed prefix validation
-2026-09-01 07:39:56 UTC,USB Tray Hub (SGS) — RoHS Lab Report.pdf,HKGEC1300012001,REJECTED,100,LEAD_EXCESS_VIOLATION: Measured 2104.0 ppm > threshold 1000 ppm | EXPIRED_CERTIFICATE: Expired on 2018-03-26 | SUSPICIOUS_LABORATORY: ID 'SGS-HK-2051305' failed prefix validation
-2026-09-01 07:39:56 UTC,PowerFlex_2000_RoHS_Zertifikat.pdf,"PG-2000A, PG-2000A1, PG-2000B, PG-2000B1, SFA1800, PFA2000",REJECTED,100,EXPIRED_CERTIFICATE: Expired on 2025-05-26 | SUSPICIOUS_LABORATORY: ID 'LCSA04085188R' failed prefix validation
-2026-09-01 07:39:56 UTC,Celestron Smartphone Adapter — RoHS Lab Report.pdf,#81035,REJECTED,100,EXPIRED_CERTIFICATE: Expired on 2023-10-23 | SUSPICIOUS_LABORATORY: ID '(2418)246-0070' failed prefix validation
-2026-09-01 07:55:18 UTC,Bowers & Wilkins Px7 S3 Headphones — DoC.pdf,Px7 S3,APPROVED,0,None
-2026-09-01 07:55:18 UTC,Philips SHB3075 Bluetooth Headphones — DoC.pdf,PHILIPS SHB3075YY/XX,REJECTED,100,OBSOLETE_SAFETY_STANDARD: Withdrawn safety standard cited: EN 60065:2014 +A11:2017 | OBSOLETE_SAFETY_STANDARD: Withdrawn safety standard cited: EN 55020:2007+A12:2016 | OBSOLETE_ROHS_STANDARD: Withdrawn RoHS standard cited: EN 50581:2012
-2026-09-01 07:55:18 UTC,Philips Portable Radio — DoC (2024).pdf,"PHILIPS TAR1509/00,TAR1509/yy",APPROVED,0,None
-2026-09-01 07:55:18 UTC,JBL Pulse 4 Bluetooth Speaker — DoC.pdf,PULSE4,REJECTED,100,DRAFT_STANDARD_CITED: Draft standard cited instead of final: Draft EN 301 489-1 V2.2.1 | DRAFT_STANDARD_CITED: Draft standard cited instead of final: Draft EN 301 489-17 V3.2.0
-2026-09-01 07:55:18 UTC,Philips Wireless Speaker — DoC (2025).pdf,"PHILIPS TAS2000B,TAS2000W,TAS2000B/00,TAS2000W/00",APPROVED,0,None
-2026-09-01 07:55:18 UTC,Sharp HT-SB121 Soundbar — DoC.pdf,HT-SB12x/2025,APPROVED,0,None
-2026-09-01 07:55:18 UTC,Starlink AC Power Supply — DoC (2025).pdf,UTP-231,APPROVED,0,None
-2026-09-01 07:55:18 UTC,"Belkin 10,000mAh Power Bank — DoC.pdf",BP0001/PB0001,REJECTED,85,OBSOLETE_SAFETY_STANDARD: Withdrawn safety standard cited: EN 60950-1:2005+A1:2009+A2:2013
+Timestamp,File Name,Associated SKU,SKU Match Status,Decision,Score,Flags
+2026-09-02 06:07:56 UTC,Sharp HT-SB121 Soundbar — DoC.pdf,UNMATCHED,unmatched,FLAGGED,50,NO_SKU_MATCH: Extracted part numbers did not match any catalog SKU

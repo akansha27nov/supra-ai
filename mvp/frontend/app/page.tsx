@@ -86,7 +86,19 @@ export default function DashboardPage() {
     } else if (decision === "REJECTED") {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full bg-error-container/20 text-error font-medium text-xs gap-1 border border-error/20">
-          <span className="material-symbols-outlined text-[12px]">error</span> Flagged
+          <span className="material-symbols-outlined text-[12px]">error</span> Rejected
+        </span>
+      );
+    } else if (decision === "FLAGGED") {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-medium text-xs gap-1 border border-amber-300">
+          <span className="material-symbols-outlined text-[12px]">warning</span> Flagged
+        </span>
+      );
+    } else if (decision === "REQUIRES_HUMAN_REVIEW") {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded-full bg-red-600 text-white font-bold text-xs gap-1 border-2 border-red-800 animate-pulse shadow-sm">
+          <span className="material-symbols-outlined text-[12px]">priority_high</span> Human Review
         </span>
       );
     } else {
@@ -103,7 +115,7 @@ export default function DashboardPage() {
   const approvedCount = logs.filter(log => log.Decision === "APPROVED").length;
   const complianceRate = totalLogs ? ((approvedCount / totalLogs) * 100).toFixed(1) : "0.0";
   
-  const pendingCount = logs.filter(log => log.Decision === "MANUAL_REVIEW" || (!log.Decision && totalLogs === 0)).length || (totalLogs === 0 ? 128 : 0);
+  const pendingCount = logs.filter(log => log.Decision === "REQUIRES_HUMAN_REVIEW").length;
   const highRiskCount = logs.filter(log => log.Decision === "REJECTED").length;
 
   // Risk Distribution Tally based on rejected log flags
@@ -218,7 +230,12 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="flex flex-col gap-5">
-                  <div className={`p-5 rounded-2xl border flex items-start gap-4 ${auditResult.audit_result?.decision === 'APPROVED' ? 'bg-tertiary-container/10 border-tertiary/30 text-tertiary' : 'bg-error-container/10 border-error/30 text-error'}`}>
+                  <div className={`p-5 rounded-2xl border flex items-start gap-4 ${
+                    auditResult.audit_result?.decision === 'APPROVED' ? 'bg-tertiary-container/10 border-tertiary/30 text-tertiary' :
+                    auditResult.audit_result?.decision === 'REQUIRES_HUMAN_REVIEW' ? 'bg-red-600/10 border-red-600/40 text-red-700 animate-pulse' :
+                    auditResult.audit_result?.decision === 'FLAGGED' ? 'bg-amber-100 border-amber-300 text-amber-800' :
+                    'bg-error-container/10 border-error/30 text-error'
+                  }`}>
                     {auditResult.audit_result?.decision === 'APPROVED' ? <CheckCircle2 size={24} className="shrink-0 mt-0.5" /> : <XCircle size={24} className="shrink-0 mt-0.5" />}
                     <div>
                       <h4 className="font-bold text-lg mb-0.5">Decision: {auditResult.audit_result?.decision || 'Reviewed'}</h4>

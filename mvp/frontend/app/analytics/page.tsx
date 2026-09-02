@@ -1,12 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useChat } from '@ai-sdk/react';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { Bot, History, Terminal, FileSpreadsheet } from 'lucide-react';
+import { Panel } from 'react-resizable-panels';
 import Sidebar from '@/components/Sidebar';
 import { fetchAuditLogs, AuditLog } from '@/lib/api';
-import { AnyAaaaRecord } from 'node:dns';
 
 export default function AnalyticsDashboard() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -27,21 +24,12 @@ export default function AnalyticsDashboard() {
     loadLogs();
   }, []);
 
-  const chatHelpers = useChat({
-    initialMessages: [
-      { id: '1', role: 'user', content: "Analyze Global Packaging Ltd's recent critical safety finding." },
-      { id: '2', role: 'assistant', content: "The safety finding involves improper hazardous material storage. Recommend immediate CAPA issuance. Similar past incidents with this supplier took avg 12 days to resolve." }
-    ]
-  } as any);
-
-  const { messages, input, handleInputChange, handleSubmit } = chatHelpers as any;
-
   // --- DYNAMIC CALCULATIONS ---
   const totalLogs = logs.length;
   const approvedCount = logs.filter(log => log.Decision === "APPROVED").length;
   const complianceRate = totalLogs ? ((approvedCount / totalLogs) * 100).toFixed(1) : "0.0";
   
-  const pendingCount = logs.filter(log => log.Decision === "MANUAL_REVIEW").length;
+  const pendingCount = logs.filter(log => log.Decision === "REQUIRES_HUMAN_REVIEW").length;
   const highRiskCount = logs.filter(log => log.Decision === "REJECTED").length;
 
   // Risk Distribution Tally based on rejected log flags
@@ -89,11 +77,7 @@ export default function AnalyticsDashboard() {
       {/* Shared Sidebar with 'analytics' active */}
       <Sidebar activePage="analytics" />
 
-      {/* Resizable Panels Container (Dashboard View vs AI Co-Pilot) */}
-      <PanelGroup direction="horizontal" className="flex-1 md:ml-64 h-screen">
-        
-        {/* Main Analytics Content Panel (Showing Dashboard View) */}
-        <Panel defaultSize={75} minSize={50} className="flex flex-col h-screen">
+        <div className="flex-1 md:ml-64 h-screen flex flex-col">
           <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-surface-bright custom-scrollbar">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -260,12 +244,7 @@ export default function AnalyticsDashboard() {
               </div>
             </div>
           </main>
-        </Panel>
-
-        {/* Resizable Divider Handle */}
-        <PanelResizeHandle className="w-[1px] bg-outline-variant hover:w-1.5 hover:bg-primary-container transition-all cursor-col-resize z-10" />
-
-      </PanelGroup>
+        </div>
     </div>
   );
 }
