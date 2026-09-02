@@ -3,12 +3,9 @@ import Link from 'next/link';
 import { 
   LayoutDashboard, 
   ShieldCheck, 
-  Factory, 
-  AlertTriangle, 
   BarChart3, 
   HelpCircle, 
-  LogOut, 
-  Plus 
+  LogOut
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -71,24 +68,6 @@ export default function Sidebar({ activePage }: SidebarProps) {
           Reports
         </Link>
       </nav>
-
-      {/* Footer Links */}
-      <div className="mt-auto px-4 flex flex-col gap-1 border-t border-outline-variant pt-4 pb-4">
-        <Link 
-          href="/help" 
-          className="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant hover:bg-surface-container-high transition-all text-sm font-medium"
-        >
-          <HelpCircle size={20} />
-          Help Center
-        </Link>
-        <Link 
-          href="/logout" 
-          className="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant hover:bg-surface-container-high transition-all text-sm font-medium"
-        >
-          <LogOut size={20} />
-          Log Out
-        </Link>
-      </div>
     </aside>
   );
 }

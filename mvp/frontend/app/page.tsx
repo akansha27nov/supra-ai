@@ -604,16 +604,18 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Card 4 */}
+            {/* Card 4: Average Portfolio Risk */}
             <div className="bg-surface-container-lowest p-4 rounded-lg border border-surface-variant flex flex-col shadow-sm">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant font-label-caps">Supplier Velocity</span>
-                <span className="material-symbols-outlined text-primary text-[20px]">speed</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant font-label-caps">Avg Risk Score</span>
+                <span className="material-symbols-outlined text-primary text-[20px]">analytics</span>
               </div>
-              <div className="text-[30px] font-bold text-on-surface mt-1 font-headline-lg">2.4 <span className="text-lg font-semibold text-on-surface-variant">days</span></div>
-              <div className="flex items-center gap-1 mt-2 text-tertiary text-xs font-medium">
-                <span className="material-symbols-outlined text-[14px]">arrow_downward</span>
-                <span>0.3 days faster</span>
+              <div className="text-[30px] font-bold text-on-surface mt-1 font-headline-lg">
+                {loading ? "..." : (totalLogs ? (logs.reduce((acc, l) => acc + (Number(l.Score) || 0), 0) / totalLogs).toFixed(1) : "0")}
+                <span className="text-sm font-semibold text-on-surface-variant"> / 100</span>
+              </div>
+              <div className="flex items-center gap-1 mt-2 text-on-surface-variant text-xs font-medium">
+                <span>Derived from portfolio audit logs</span>
               </div>
             </div>
           </div>

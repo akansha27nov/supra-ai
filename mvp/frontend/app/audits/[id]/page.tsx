@@ -3,23 +3,47 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
-import { ArrowLeft, CheckCircle, XCircle, FileText, AlertTriangle, ShieldAlert } from 'lucide-react';
-import { fetchAuditLogs, AuditLog } from '@/lib/api';
+import { 
+  ArrowLeft, CheckCircle, XCircle, FileText, 
+  ShieldAlert, Mail, Send, UserCheck, Layers, FileSearch, SlidersHorizontal 
+} from 'lucide-react';
+import { fetchAuditLogs, submitReviewDecision, generateGapNotice, AuditLog } from '@/lib/api';
+import { exportAuditLogsToCSV } from '@/lib/exportUtils';
 
 export default function AuditDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const auditId = params?.id as string || '1';
+  const auditId = (params?.id as string) || '';
 
-  const [audit, setAudit] = useState<any | null>(null);
+  const [audit, setAudit] = useState<AuditLog | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentDecision, setCurrentDecision] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Active Tab State for comparison views
+  const [activeTab, setActiveTab] = useState<'overview' | 'extracted' | 'policy'>('overview');
+
+  // Gap Notice Modal State (US-3.2)
+  const [showGapModal, setShowGapModal] = useState(false);
+  const [gapNoticeText, setGapNoticeText] = useState('');
+  const [noticeSent, setNoticeSent] = useState(false);
+  const [loadingNotice, setLoadingNotice] = useState(false);
 
   useEffect(() => {
     const loadAudit = async () => {
       try {
-        const logs = (await fetchAuditLogs()) as any[];
-        const found = logs.find((l: any, idx: number) => String(l.id || idx + 1) === auditId) || logs[0];
+        const logs = await fetchAuditLogs();
+        const found = logs.find(
+          (l, idx) => l.RecordID === auditId || String(idx + 1) === auditId
+        ) || logs[0];
+
         setAudit(found || null);
+        if (found) {
+          const initialStatus = (found.ReviewStatus && found.ReviewStatus !== 'PENDING') 
+            ? found.ReviewStatus 
+            : found.Decision || 'PENDING';
+          setCurrentDecision(initialStatus);
+        }
       } catch (error) {
         console.error("Failed to load audit detail:", error);
       } finally {
@@ -29,10 +53,72 @@ export default function AuditDetailPage() {
     loadAudit();
   }, [auditId]);
 
+  const handleApprove = async () => {
+    if (!audit?.RecordID) return;
+    setIsSubmitting(true);
+    try {
+      await submitReviewDecision(audit.RecordID, "APPROVED", "Lead Auditor");
+      setCurrentDecision("APPROVED");
+      alert(`Audit record has been successfully APPROVED.`);
+    } catch (error) {
+      console.error("Failed to submit approval:", error);
+      alert("Failed to submit approval decision.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!audit?.RecordID) return;
+    setIsSubmitting(true);
+    try {
+      await submitReviewDecision(audit.RecordID, "REJECTED", "Lead Auditor");
+      setCurrentDecision("REJECTED");
+      setLoadingNotice(true);
+      setShowGapModal(true);
+
+      try {
+        const gapNoticeRes = await generateGapNotice({
+          audit_result: { Decision: audit.Decision, Score: audit.Score, Flags: audit.Flags },
+          extracted: { file_name: audit["File Name"], sku: audit.SKU },
+          associated_sku: audit.SKU
+        });
+        setGapNoticeText(gapNoticeRes.draft);
+      } catch (gapErr) {
+        setGapNoticeText(
+          `SUPPLIER CORRECTIVE ACTION NOTICE\n\n` +
+          `Document: ${audit["File Name"]}\nSKU: ${audit.SKU || 'N/A'}\n\n` +
+          `Reason: ${audit.Flags || 'Failed compliance check.'}`
+        );
+      } finally {
+        setLoadingNotice(false);
+      }
+    } catch (error) {
+      alert("Failed to submit rejection.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSendGapNotice = () => {
+    setNoticeSent(true);
+    setTimeout(() => {
+      setShowGapModal(false);
+      setNoticeSent(false);
+      alert("Supplier Gap Notice sent successfully!");
+    }, 800);
+  };
+
+  const handleExport = () => {
+    if (audit) {
+      exportAuditLogsToCSV([audit], `audit-${audit.RecordID || auditId}-report.csv`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-background text-on-background min-h-screen flex items-center justify-center">
-        <p className="text-sm text-on-surface-variant animate-pulse">Loading audit details...</p>
+        <p className="text-sm text-on-surface-variant animate-pulse">Loading audit record...</p>
       </div>
     );
   }
@@ -40,17 +126,17 @@ export default function AuditDetailPage() {
   if (!audit) {
     return (
       <div className="bg-background text-on-background min-h-screen flex items-center justify-center flex-col gap-4">
-        <p className="text-lg font-bold">Audit not found</p>
+        <p className="text-lg font-bold">Audit Record Not Found</p>
         <button onClick={() => router.push('/audits')} className="px-4 py-2 bg-primary text-on-primary rounded">Back to Audits</button>
       </div>
     );
   }
 
-  const riskScore = audit.Score ?? 50;
-  const isHighRisk = riskScore > 75 || audit.Decision === "REJECTED";
+  const riskScore = audit.Score ?? 0;
+  const isPending = !audit.ReviewStatus || audit.ReviewStatus === "PENDING" || currentDecision === "PENDING";
 
   return (
-    <div className="bg-background text-on-background min-h-screen flex antialiased selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
+    <div className="bg-background text-on-background min-h-screen flex antialiased selection:bg-primary-container overflow-hidden">
       <Sidebar activePage="audits" />
 
       <main className="flex-1 flex flex-col md:ml-64 h-screen overflow-hidden bg-surface-bright">
@@ -60,76 +146,266 @@ export default function AuditDetailPage() {
             <button 
               onClick={() => router.push('/audits')}
               className="p-2 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant"
-              title="Back to Audits"
             >
               <ArrowLeft size={20} />
             </button>
-            <h2 className="text-xl font-bold text-on-background font-headline-md">Audit Details #{auditId}</h2>
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border flex items-center gap-1 ${isHighRisk ? 'bg-error-container/20 text-error border-error/20' : 'bg-secondary-container/20 text-secondary border-secondary/20'}`}>
-              <AlertTriangle size={12} /> {audit.Decision || 'Pending'} ({riskScore})
-            </span>
+            <h2 className="text-xl font-bold text-on-background font-headline-md">
+              Audit Details
+            </h2>
           </div>
+          
           <div className="flex items-center gap-3">
-            <button onClick={() => alert("Audit rejected successfully")} className="flex items-center gap-2 px-4 py-2 bg-error text-on-error rounded text-sm font-medium hover:opacity-90 transition-opacity shadow-sm">
-              <XCircle size={16} /> Reject Audit
+            <button 
+              onClick={handleExport}
+              className="flex items-center gap-2 px-3 py-2 bg-surface-container-highest border border-outline-variant text-on-surface rounded text-sm font-medium hover:bg-surface-container transition-colors shadow-sm"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>download</span>
+              Export CSV
             </button>
-            <button onClick={() => alert("Audit approved successfully")} className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded text-sm font-medium hover:bg-surface-tint transition-colors shadow-sm">
-              <CheckCircle size={16} /> Approve Audit
-            </button>
+
+            {isPending ? (
+              <>
+                <button 
+                  onClick={handleReject} 
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 px-4 py-2 bg-error text-on-error rounded text-sm font-medium hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50"
+                >
+                  <XCircle size={16} /> Reject Audit
+                </button>
+                <button 
+                  onClick={handleApprove} 
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded text-sm font-medium hover:bg-surface-tint transition-colors shadow-sm disabled:opacity-50"
+                >
+                  <CheckCircle size={16} /> Approve Audit
+                </button>
+              </>
+            ) : (
+              <span className="px-3 py-1.5 bg-surface-container text-on-surface-variant rounded-lg text-xs font-medium border border-outline-variant flex items-center gap-1.5">
+                <UserCheck size={14} className="text-primary" /> Review Finalized: {currentDecision}
+              </span>
+            )}
           </div>
         </header>
 
-        {/* Content Canvas */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Metadata & AI Analysis */}
-          <div className="lg:col-span-1 flex flex-col gap-6">
-            <div className="bg-surface-container-lowest p-6 rounded-lg border border-surface-variant shadow-sm flex flex-col gap-4">
-              <h3 className="text-lg font-bold font-headline-sm text-on-surface">Supplier Information</h3>
-              <div className="flex flex-col gap-2 text-sm">
-                <div className="flex justify-between py-1 border-b border-surface-variant">
-                  <span className="text-on-surface-variant">Supplier Name</span>
-                  <span className="font-medium text-on-surface">{audit.Supplier}</span>
+        {/* Tab Navigation Bar */}
+        <div className="bg-surface border-b border-outline-variant px-6 flex items-center gap-6">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`py-3.5 text-sm font-medium border-b-2 flex items-center gap-2 transition-colors ${
+              activeTab === 'overview'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <Layers size={16} /> Overview Summary
+          </button>
+          <button
+            onClick={() => setActiveTab('extracted')}
+            className={`py-3.5 text-sm font-medium border-b-2 flex items-center gap-2 transition-colors ${
+              activeTab === 'extracted'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <FileSearch size={16} /> Extracted Data Schema
+          </button>
+          <button
+            onClick={() => setActiveTab('policy')}
+            className={`py-3.5 text-sm font-medium border-b-2 flex items-center gap-2 transition-colors ${
+              activeTab === 'policy'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <SlidersHorizontal size={16} /> Policy Engine Trace
+          </button>
+        </div>
+
+        {/* Tab Content Body */}
+        <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
+          
+          {/* TAB 1: OVERVIEW SUMMARY */}
+          {activeTab === 'overview' && (
+            <div className="max-w-4xl mx-auto flex flex-col gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-surface-container-lowest p-5 rounded-lg border border-surface-variant shadow-sm flex flex-col gap-1">
+                  <span className="text-xs text-on-surface-variant uppercase tracking-wider">Source File</span>
+                  <span className="text-sm font-semibold text-on-surface truncate" title={audit["File Name"]}>
+                    {audit["File Name"] || "N/A"}
+                  </span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-surface-variant">
-                  <span className="text-on-surface-variant">SKU / Item</span>
-                  <span className="font-medium text-on-surface">{audit.SKU}</span>
+                <div className="bg-surface-container-lowest p-5 rounded-lg border border-surface-variant shadow-sm flex flex-col gap-1">
+                  <span className="text-xs text-on-surface-variant uppercase tracking-wider">Catalog SKU</span>
+                  <span className="text-sm font-mono font-semibold text-primary">
+                    {audit.SKU || "Unassigned"}
+                  </span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-surface-variant">
-                  <span className="text-on-surface-variant">Submission Date</span>
-                  <span className="font-medium text-on-surface">{audit.Timestamp ? new Date(audit.Timestamp).toLocaleString() : 'N/A'}</span>
+                <div className="bg-surface-container-lowest p-5 rounded-lg border border-surface-variant shadow-sm flex flex-col gap-1">
+                  <span className="text-xs text-on-surface-variant uppercase tracking-wider">Compliance Risk Score</span>
+                  <span className={`text-sm font-bold ${riskScore > 75 ? 'text-error' : 'text-tertiary'}`}>
+                    {riskScore} / 100 ({currentDecision})
+                  </span>
                 </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-on-surface-variant">Risk Score</span>
-                  <span className={`font-bold ${isHighRisk ? 'text-error' : 'text-primary'}`}>{riskScore} / 100</span>
+              </div>
+
+              <div className="bg-surface-container-lowest p-6 rounded-lg border border-surface-variant shadow-sm flex flex-col gap-4">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-on-surface border-b border-surface-variant pb-2">
+                  Audit Summary Details
+                </h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-xs text-on-surface-variant block">SKU Match Status</span>
+                    <span className="font-semibold text-on-surface capitalize">
+                      {audit["SKU Match Status"] ? audit["SKU Match Status"].replace(/_/g, ' ') : "Pending"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-on-surface-variant block">Submission Timestamp</span>
+                    <span className="font-medium text-on-surface">
+                      {audit.Timestamp ? new Date(audit.Timestamp).toLocaleString() : 'N/A'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-on-surface-variant block">Assigned Reviewer</span>
+                    <span className="font-medium text-on-surface">{audit.Reviewer || "Unassigned"}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-on-surface-variant block">Automated Decision</span>
+                    <span className="font-medium text-on-surface">{audit.Decision || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {currentDecision === "REJECTED" && (
+                <div className="bg-surface-container-lowest p-6 rounded-lg border border-surface-variant shadow-sm flex flex-col gap-3">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-on-surface">Supplier Gap Notice Action</h3>
+                  <button 
+                    onClick={() => setShowGapModal(true)}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-error-container/30 text-error rounded-lg text-sm font-medium border border-error/20 hover:bg-error-container/50 transition-colors"
+                  >
+                    <Mail size={16} /> View Supplier Gap Notice Draft
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: EXTRACTED DATA SCHEMA */}
+          {activeTab === 'extracted' && (
+            <div className="max-w-4xl mx-auto flex flex-col gap-6">
+              <div className="bg-surface-container-lowest p-6 rounded-lg border border-surface-variant shadow-sm flex flex-col gap-4">
+                <div className="flex items-center justify-between pb-3 border-b border-surface-variant">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-on-surface flex items-center gap-2">
+                    <FileText size={16} className="text-primary" /> Raw Extracted Ledger Schema
+                  </h3>
+                  <span className="text-xs font-mono bg-secondary-container text-on-secondary-container px-2.5 py-0.5 rounded">
+                    Record ID: {audit.RecordID}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-3 text-sm">
+                  <div className="flex justify-between py-2.5 border-b border-surface-variant">
+                    <span className="text-on-surface-variant">File Name</span>
+                    <span className="font-mono text-on-surface">{audit["File Name"]}</span>
+                  </div>
+                  <div className="flex justify-between py-2.5 border-b border-surface-variant">
+                    <span className="text-on-surface-variant">SKU Property</span>
+                    <span className="font-mono text-primary font-semibold">{audit.SKU || "N/A"}</span>
+                  </div>
+                  <div className="flex justify-between py-2.5 border-b border-surface-variant">
+                    <span className="text-on-surface-variant">SKU Match Status</span>
+                    <span className="font-mono text-on-surface capitalize">
+                      {audit["SKU Match Status"] ? audit["SKU Match Status"].replace(/_/g, ' ') : "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-2.5 border-b border-surface-variant">
+                    <span className="text-on-surface-variant">Timestamp</span>
+                    <span className="font-mono text-on-surface">{audit.Timestamp || "N/A"}</span>
+                  </div>
+                  <div className="flex justify-between py-2.5 border-b border-surface-variant">
+                    <span className="text-on-surface-variant">Reviewer Name</span>
+                    <span className="font-mono text-on-surface">{audit.Reviewer || "N/A"}</span>
+                  </div>
+                  <div className="flex justify-between py-2.5">
+                    <span className="text-on-surface-variant">Review Status</span>
+                    <span className="font-mono text-on-surface">{audit.ReviewStatus || "PENDING"}</span>
+                  </div>
                 </div>
               </div>
             </div>
+          )}
 
-            <div className="bg-surface-container-lowest p-6 rounded-lg border border-surface-variant shadow-sm flex flex-col gap-4">
-              <h3 className="text-lg font-bold font-headline-sm text-on-surface flex items-center gap-2">
-                <ShieldAlert size={18} className="text-error" /> AI Compliance Findings
-              </h3>
-              <p className="text-sm text-on-surface-variant leading-relaxed">
-                {audit.Reasoning || audit.Flags || "No specific compliance findings recorded for this audit entry."}
-              </p>
-            </div>
-          </div>
+          {/* TAB 3: POLICY ENGINE TRACE */}
+          {activeTab === 'policy' && (
+            <div className="max-w-4xl mx-auto flex flex-col gap-6">
+              <div className="bg-surface-container-lowest p-6 rounded-lg border border-surface-variant shadow-sm flex flex-col gap-4">
+                <div className="pb-3 border-b border-surface-variant">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-on-surface flex items-center gap-2">
+                    <ShieldAlert size={16} className="text-primary" /> Policy Engine Trace & Flags
+                  </h3>
+                </div>
 
-          {/* Right Column: Document Viewer Mock */}
-          <div className="lg:col-span-2 bg-surface-container-lowest p-6 rounded-lg border border-surface-variant shadow-sm flex flex-col h-[600px]">
-            <div className="flex items-center justify-between pb-4 border-b border-surface-variant mb-4">
-              <h3 className="text-sm font-bold font-label-caps text-on-surface uppercase tracking-wider flex items-center gap-2">
-                <FileText size={16} className="text-primary" /> Document Preview
-              </h3>
-              <span className="text-xs text-on-surface-variant">Page 1 of 1</span>
+                <div className="flex flex-col gap-4">
+                  <div className="p-4 bg-surface-container rounded-lg border border-outline-variant flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-on-surface">Automated Decision Result</span>
+                      <span className={`px-2.5 py-0.5 rounded text-xs font-bold ${audit.Decision === "APPROVED" ? "bg-tertiary/10 text-tertiary" : "bg-error/10 text-error"}`}>
+                        {audit.Decision || "UNKNOWN"}
+                      </span>
+                    </div>
+                    <span className="text-xs text-on-surface-variant">Calculated Risk Score: {riskScore} / 100</span>
+                  </div>
+
+                  <div className="p-4 bg-surface-container rounded-lg border border-outline-variant flex flex-col gap-2">
+                    <span className="text-sm font-bold text-on-surface">Evaluated Flags & Rule Violations</span>
+                    <p className="text-xs font-mono text-on-surface-variant bg-surface-container-highest p-3 rounded leading-relaxed">
+                      {audit.Flags || "No rule flags or violations recorded in ledger."}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex-1 bg-surface-container rounded border border-outline-variant flex items-center justify-center text-on-surface-variant flex-col gap-3">
-              <FileText size={48} className="text-outline" />
-              <p className="text-sm font-medium">{audit.Document || `${audit.SKU}_Compliance_Doc.pdf`}</p>
-              <span className="text-xs text-on-surface-variant/70">Preview rendering active (API Source)</span>
-            </div>
-          </div>
+          )}
+
         </div>
+
+        {/* Dynamic AI Gap Notice Modal (US-3.2) */}
+        {showGapModal && (
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-surface-container-lowest w-full max-w-2xl rounded-xl border border-outline-variant shadow-xl p-6 flex flex-col gap-4">
+              <div className="flex justify-between items-center pb-3 border-b border-surface-variant">
+                <h3 className="text-lg font-bold text-on-surface flex items-center gap-2">
+                  <Mail size={20} className="text-primary" /> Generated Supplier Gap Notice
+                </h3>
+                <button onClick={() => setShowGapModal(false)} className="text-on-surface-variant hover:text-on-surface font-bold">✕</button>
+              </div>
+
+              {loadingNotice ? (
+                <div className="h-56 flex items-center justify-center text-sm text-on-surface-variant animate-pulse">
+                  Drafting supplier notice using API endpoint...
+                </div>
+              ) : (
+                <textarea 
+                  value={gapNoticeText}
+                  onChange={(e) => setGapNoticeText(e.target.value)}
+                  className="w-full h-56 p-3 bg-surface-container border border-outline-variant rounded-lg font-code-sm text-sm text-on-surface focus:outline-none focus:border-primary resize-none"
+                />
+              )}
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={() => setShowGapModal(false)} className="px-4 py-2 border border-outline-variant text-on-surface rounded-lg text-sm font-medium">Cancel</button>
+                <button 
+                  onClick={handleSendGapNotice}
+                  disabled={noticeSent || loadingNotice}
+                  className="flex items-center gap-2 px-5 py-2 bg-primary text-on-primary rounded-lg text-sm font-medium shadow-sm disabled:opacity-50"
+                >
+                  <Send size={16} /> {noticeSent ? "Sending Notice..." : "Send Notice to Supplier"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

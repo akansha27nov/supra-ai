@@ -27,17 +27,37 @@ export default function AuditsPage() {
     loadLogs();
   }, []);
 
+  // Helper to resolve effective status (prioritizes human ReviewStatus over AI Decision)
+  const getEffectiveStatus = (log: any): string => {
+    const reviewStatus = String(log.ReviewStatus || "").trim().toUpperCase();
+    if (reviewStatus && reviewStatus !== "PENDING") {
+      return reviewStatus;
+    }
+    return String(log.Decision || "PENDING").trim().toUpperCase();
+  };
+
+  // Dynamically extract unique effective statuses from loaded logs for the dropdown
+  const availableStatuses = Array.from(
+    new Set(logs.map((l: any) => getEffectiveStatus(l)))
+  );
+
   const filteredLogs = logs.filter((log: any) => {
+    const query = searchQuery.toLowerCase().trim();
     const matchesSearch = 
-      (log.SKU || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (log.Supplier || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (log.Item || "").toLowerCase().includes(searchQuery.toLowerCase());
+      !query ||
+      (log.SKU || "").toLowerCase().includes(query) ||
+      (log.Supplier || "").toLowerCase().includes(query) ||
+      (log.Item || "").toLowerCase().includes(query) ||
+      (log.Document || "").toLowerCase().includes(query) ||
+      (log.Flags || "").toLowerCase().includes(query) ||
+      (log["File Name"] || "").toLowerCase().includes(query);
     
+    const logStatus = getEffectiveStatus(log);
     if (statusFilter === 'ALL') return matchesSearch;
-    return matchesSearch && (log.Decision || "").toUpperCase() === statusFilter;
+    return matchesSearch && logStatus === statusFilter;
   });
 
-  const pendingCount = logs.filter(l => l.Decision === "MANUAL_REVIEW" || !l.Decision).length;
+  const pendingCount = logs.filter(l => getEffectiveStatus(l) === "PENDING" || l.Decision === "MANUAL_REVIEW" || !l.Decision).length;
 
   // --- Export Handler ---
   const handleExport = () => {
@@ -59,17 +79,7 @@ export default function AuditsPage() {
               {loading ? "..." : `${pendingCount} Pending`}
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors duration-200">
-              <span className="material-symbols-outlined" data-icon="notifications">notifications</span>
-            </button>
-            <button className="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors duration-200">
-              <span className="material-symbols-outlined" data-icon="help">help</span>
-            </button>
-            <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
-              <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAiUzOaI5xb_1zhghnE-Pfa1VsdzLkIMnABt0qPos4bRdX70C5AkPsY4tq3bu1f3UzlyXSgHq3m4RY-N8v8lJup5GLyAKlPm08mXrqECihz4Fh3y-0A3TmLNqnmEpUlOk_CEogQwEyeMMos-9_vZOg4CIqCQfbwYkhyoC1_kJ9dVRVKYj6iXLMvByZY21gKhfoiSEvQcKYFoetTFeKLsqJgfDdgN_t2QIhSLRPM790SrgPVqQO2H4" alt="Profile" />
-            </div>
-          </div>
+          <div className="flex items-center gap-3"></div>
         </header>
 
         {/* Content Scrollable Area */}
@@ -78,30 +88,37 @@ export default function AuditsPage() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div className="flex flex-wrap items-center gap-3">
               {/* Search Input */}
-              <div className="relative w-64">
+              <div className="relative w-72">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="search" style={{ fontSize: '20px' }}>search</span>
                 <input 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-3 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg font-body-sm text-body-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm" 
-                  placeholder="Search SKU or Supplier..." 
+                  placeholder="Search file name, SKU, flags..." 
                   type="text" 
                 />
               </div>
-              {/* Filter Dropdown */}
+
+              {/* Styled Filter Dropdown */}
               <div className="relative">
                 <select 
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="flex items-center gap-2 px-3 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg font-body-sm text-body-sm text-on-surface hover:bg-surface-container-low transition-colors shadow-sm outline-none cursor-pointer"
+                  className="w-44 px-3 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg font-body-sm text-body-sm text-on-surface hover:bg-surface-container-low transition-colors shadow-sm outline-none cursor-pointer appearance-none pr-8"
                 >
                   <option value="ALL">All Statuses</option>
-                  <option value="APPROVED">Approved</option>
-                  <option value="REJECTED">Rejected</option>
-                  <option value="MANUAL_REVIEW">Manual Review</option>
+                  {availableStatuses.map((status) => (
+                    <option key={status} value={status}>
+                      {status.charAt(0) + status.slice(1).toLowerCase().replace('_', ' ')}
+                    </option>
+                  ))}
                 </select>
+                <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" style={{ fontSize: '18px' }}>
+                  expand_more
+                </span>
               </div>
             </div>
+
             {/* Bulk Actions */}
             <div className="flex items-center gap-2">
               <button 
@@ -120,72 +137,64 @@ export default function AuditsPage() {
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead className="bg-surface-container-low border-b border-outline-variant">
                   <tr>
-                    <th className="py-3 px-4 w-12 text-center">
-                      <input className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary focus:ring-offset-0" type="checkbox" />
-                    </th>
-                    <th className="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">SKU / ITEM</th>
+                    <th className="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">SKU / FILE NAME</th>
                     <th className="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">SUPPLIER</th>
-                    <th className="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">DOCUMENT TYPE</th>
+                    <th className="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">DOCUMENT / FLAGS</th>
                     <th className="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">DATE SUBMITTED</th>
-                    <th className="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">RISK SCORE</th>
-                    <th className="py-3 px-4 w-12"></th>
+                    <th className="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">RISK SCORE & STATUS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant font-body-sm text-body-sm text-on-surface">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-8 text-on-surface-variant">Loading audit queue from API...</td>
+                      <td colSpan={5} className="text-center py-8 text-on-surface-variant">Loading audit queue from API...</td>
                     </tr>
                   ) : filteredLogs.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-8 text-on-surface-variant">No audit records found.</td>
+                      <td colSpan={5} className="text-center py-8 text-on-surface-variant">No audit records found matching your filters.</td>
                     </tr>
                   ) : (
                     filteredLogs.map((log: any, index: number) => {
-                      const logId = log.id || index + 1;
+                      const logId = log.RecordID || index + 1;
                       const riskScore = log.Score ?? 50;
-                      const isRejected = log.Decision === "REJECTED";
-                      const isReview = log.Decision === "MANUAL_REVIEW";
-                      const riskColor = isRejected ? 'bg-error' : isReview ? 'bg-[#d97706]' : 'bg-tertiary';
+                      const effectiveStatus = getEffectiveStatus(log);
+                      
+                      const isApproved = effectiveStatus === "APPROVED";
+                      const isRejected = effectiveStatus === "REJECTED";
+                      
+                      const riskColor = isRejected ? 'bg-error' : isApproved ? 'bg-tertiary' : 'bg-[#d97706]';
 
                       return (
                         <tr key={logId} onClick={() => router.push(`/audits/${logId}`)} className="hover:bg-surface transition-colors group relative cursor-pointer">
-                          <td className="py-3 px-4 text-center align-middle relative" onClick={(e) => e.stopPropagation()}>
-                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${riskColor}`}></div>
-                            <input className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary focus:ring-offset-0 mt-1" type="checkbox" />
-                          </td>
                           <td className="py-3 px-4 font-code-md text-code-md text-on-surface-variant">
-                            {log.SKU || "SKU-UNKNOWN"}
-                            <div className="font-body-sm text-body-sm text-on-surface mt-0.5 truncate max-w-[200px]">{log.Item || log.Document || "Compliance Document"}</div>
+                            <span className="font-semibold text-primary">{log.SKU || "UNMATCHED"}</span>
+                            <div className="font-body-sm text-body-sm text-on-surface mt-0.5 truncate max-w-[240px]" title={log["File Name"]}>
+                              {log["File Name"] || log.Item || "Compliance Document"}
+                            </div>
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded bg-surface-variant flex items-center justify-center font-label-caps text-[10px] text-on-surface-variant">
+                              <div className="w-6 h-6 rounded bg-surface-variant flex items-center justify-center font-label-caps text-[10px] text-on-surface-variant flex-shrink-0">
                                 {(log.Supplier || "SP").substring(0, 2).toUpperCase()}
                               </div>
-                              <span>{log.Supplier || "Unknown Supplier"}</span>
+                              <span className="truncate max-w-[140px]">{log.Supplier || "Unknown Supplier"}</span>
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-surface-container border border-outline-variant">
-                              <span className="material-symbols-outlined text-on-surface-variant" data-icon="policy" style={{ fontSize: '14px' }}>policy</span>
-                              {log.Document || log.Flags || "Compliance Cert"}
-                            </span>
+                            <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-surface-container border border-outline-variant max-w-[260px] truncate" title={log.Flags}>
+                              <span className="material-symbols-outlined text-on-surface-variant flex-shrink-0" data-icon="policy" style={{ fontSize: '14px' }}>policy</span>
+                              <span className="truncate text-xs">{log.Flags || log.Document || "No flags recorded"}</span>
+                            </div>
                           </td>
-                          <td className="py-3 px-4 text-on-surface-variant">
+                          <td className="py-3 px-4 text-on-surface-variant whitespace-nowrap">
                             {log.Timestamp ? new Date(log.Timestamp).toLocaleDateString() : 'N/A'} 
                             <span className="text-xs ml-1 opacity-70">{log.Timestamp ? new Date(log.Timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                           </td>
-                          <td className="py-3 px-4">
-                            <div className={`inline-flex items-center px-2 py-1 rounded-full font-medium gap-1.5 ${isRejected ? 'bg-error/10 text-error' : isReview ? 'bg-[#d97706]/10 text-[#b45309]' : 'bg-tertiary/10 text-tertiary'}`}>
-                              <span className={`w-2 h-2 rounded-full ${riskColor}`}></span>
-                              {riskScore} ({log.Decision || 'Pending'})
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <div className={`inline-flex items-center px-2.5 py-1 rounded-full font-medium gap-1.5 ${isRejected ? 'bg-error/10 text-error' : isApproved ? 'bg-tertiary/10 text-tertiary' : 'bg-amber-100 text-amber-800'}`}>
+                              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${riskColor}`}></span>
+                              {riskScore} ({effectiveStatus})
                             </div>
-                          </td>
-                          <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                            <button className="p-1 text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity hover:bg-surface-container rounded">
-                              <span className="material-symbols-outlined" data-icon="more_vert" style={{ fontSize: '20px' }}>more_vert</span>
-                            </button>
                           </td>
                         </tr>
                       );
