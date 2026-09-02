@@ -7,7 +7,7 @@ export const exportAuditLogsToCSV = (logs: AuditLog[], filename = "compliance-au
   }
 
   // Define CSV headers based on key AuditLog properties
-  const headers = ["RecordID", "Timestamp", "File Name", "SKU", "Decision", "ReviewStatus", "Score", "Reviewer", "Flags"];
+  const headers = ["RecordID", "Timestamp", "File Name", "Supplier", "SKU", "Decision", "ReviewStatus", "Score", "Reviewer", "Flags"];
 
   // Map rows to CSV safe strings
   const csvRows = logs.map(log => {
@@ -15,6 +15,7 @@ export const exportAuditLogsToCSV = (logs: AuditLog[], filename = "compliance-au
       log.RecordID || "",
       `"${(log.Timestamp || "").replace(/"/g, '""')}"`,
       `"${(log["File Name"] || "").replace(/"/g, '""')}"`,
+      `"${(log.Supplier || "").replace(/"/g, '""')}"`,
       `"${(log.SKU || "").replace(/"/g, '""')}"`,
       log.Decision || "",
       log.ReviewStatus || "",

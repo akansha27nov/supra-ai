@@ -188,6 +188,7 @@ def append_to_master_csv(results: list, output_dir: Path = Path("logs")) -> Path
                 "RecordID",
                 "Timestamp",
                 "File Name",
+                "Supplier",
                 "Associated SKU",
                 "SKU Match Status",
                 "Decision",
@@ -206,6 +207,8 @@ def append_to_master_csv(results: list, output_dir: Path = Path("logs")) -> Path
             file_name = res.get("file_name", "Unknown")
             sku = res.get("associated_sku") or "UNMATCHED"
             sku_match = res.get("sku_match_status", "not_attempted")
+            extracted = res.get("extracted", {}) or {}
+            supplier = extracted.get("supplier_name") or "Unknown Supplier"
 
             audit_res = res.get("audit_result", {}) or {}
             decision = audit_res.get("decision", "UNKNOWN")
@@ -228,6 +231,7 @@ def append_to_master_csv(results: list, output_dir: Path = Path("logs")) -> Path
                 record_id,
                 current_time_str,
                 file_name,
+                supplier,
                 sku,
                 sku_match,
                 decision,

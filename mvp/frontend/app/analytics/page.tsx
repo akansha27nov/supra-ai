@@ -31,15 +31,21 @@ export default function AnalyticsDashboard() {
   // --- DYNAMIC CALCULATIONS ---
   const totalLogs = logs.length;
 
-  // Helper to get effective status (fallback to Decision if ReviewStatus isn't set)
-  const getEffectiveStatus = (log: AuditLog) => {
-    return log.ReviewStatus || log.Decision;
+  const getEffectiveStatus = (log: AuditLog): string => {
+    const reviewStatus = String(log.ReviewStatus || "").trim().toUpperCase();
+    if (reviewStatus && reviewStatus !== "PENDING") {
+      return reviewStatus;
+    }
+    return String(log.Decision || "PENDING").trim().toUpperCase();
   };
 
   const approvedCount = logs.filter(log => getEffectiveStatus(log) === "APPROVED").length;
   const complianceRate = totalLogs ? ((approvedCount / totalLogs) * 100).toFixed(1) : "0.0";
   
-  const pendingCount = logs.filter(log => getEffectiveStatus(log) === "REQUIRES_HUMAN_REVIEW" || getEffectiveStatus(log) === "FLAGGED" && !log.ReviewStatus).length;
+  const pendingCount = logs.filter(log => {
+    const status = getEffectiveStatus(log);
+    return status === "REQUIRES_HUMAN_REVIEW" || status === "FLAGGED" || status === "PENDING";
+  }).length;
   const highRiskCount = logs.filter(log => getEffectiveStatus(log) === "REJECTED").length;
 
   // Risk Distribution Tally supporting rejected/flagged logs
@@ -80,7 +86,7 @@ export default function AnalyticsDashboard() {
       return !isNaN(logDate.getTime()) && logDate.getFullYear() === m.year && logDate.getMonth() === m.month;
     });
     if (monthLogs.length === 0) return { name: m.name, rate: 0 };
-    const monthApproved = monthLogs.filter(log => log.Decision === "APPROVED").length;
+    const monthApproved = monthLogs.filter(log => getEffectiveStatus(log) === "APPROVED").length;
     const rate = Math.round((monthApproved / monthLogs.length) * 100);
     return { name: m.name, rate };
   });

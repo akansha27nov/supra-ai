@@ -52,6 +52,9 @@ def _migrate_ledger_columns() -> None:
     if "RecordID" not in df.columns:
         df.insert(0, "RecordID", [str(uuid.uuid4()) for _ in range(len(df))])
         changed = True
+    if "Supplier" not in df.columns:
+        df["Supplier"] = "Unknown Supplier"
+        changed = True
     if "ReviewStatus" not in df.columns:
         df["ReviewStatus"] = "PENDING"
         changed = True
@@ -61,7 +64,7 @@ def _migrate_ledger_columns() -> None:
 
     if changed:
         df.to_csv(csv_path, index=False)
-        print(f"[startup] Migrated {csv_path} to include RecordID/ReviewStatus")
+        print(f"[startup] Migrated {csv_path} to include RecordID/Supplier/ReviewStatus")
 
 
 _migrate_ledger_columns()

@@ -8,6 +8,7 @@ export interface AuditLog {
   RecordID: string;
   Timestamp: string;
   "File Name": string;
+  Supplier?: string;
   SKU: string;
   "SKU Match Status"?: string;
   Decision: string;
