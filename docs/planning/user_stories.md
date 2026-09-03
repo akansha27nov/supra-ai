@@ -61,11 +61,11 @@ The next iteration expands the current proof of concept from synthetic certifica
 
 ### US-2.2 — Apply deterministic screening rules
 
-> **As a Procurement Specialist, I want structured evidence evaluated by deterministic rules, so that the final policy decision is reproducible and does not depend on an LLM making the compliance decision.**
+> **As a compliance analyst, I want the system to evaluate extracted fields against compliance rules and return a decision of APPROVED, FLAGGED, or REJECTED so that I can determine the appropriate compliance outcome.**
 
 **Acceptance criteria**
 
-- Given valid structured extraction output, when the rule engine runs, then it returns `PASS`, `FLAGGED`, or `REJECTED` plus a priority/severity score.
+- Given valid structured extraction output, when the rule engine runs, then it returns `APPROVED`, `FLAGGED`, or `REJECTED` plus a priority/severity score.
 - The rule engine applies the defined policy thresholds consistently.
 - Missing or non-applicable values do not cause unhandled exceptions.
 - The LLM may extract or reconcile evidence but must not invent the final policy status.

@@ -154,3 +154,29 @@ def approve_gap_notice_for_sending(
     record["approved_at"] = datetime.now(timezone.utc).isoformat()
     record["updated_at"] = datetime.now(timezone.utc).isoformat()
     return record
+
+
+@traceable(name="send_gap_notice", run_type="chain")
+def send_gap_notice(record: dict[str, Any]) -> dict[str, Any]:
+    """Transitions an APPROVED_FOR_SENDING record to SENT.
+
+    Previously DRAFT->EDITED->APPROVED_FOR_SENDING were the only handled
+    transitions; SENT existed in the GapNoticeStatus enum but was
+    structurally unreachable. This closes that gap -- but only at the status
+    level.
+
+    IMPORTANT: this function only records that the notice was marked as
+    sent. No email/SMTP/SendGrid dispatch mechanism exists anywhere in this
+    codebase yet -- the frontend's "Send Notice to Supplier" button remains a
+    simulated action. Wiring up real dispatch is a separate, explicitly
+    lower-priority piece of work. Callers should treat the resulting SENT
+    status as "recorded as sent", not "delivered to the supplier's inbox".
+    """
+    if record.get("status") != GapNoticeStatus.APPROVED_FOR_SENDING:
+        raise ValueError(
+            f"Cannot send a notice in status '{record.get('status')}'; "
+            "it must be APPROVED_FOR_SENDING first."
+        )
+    record["status"] = GapNoticeStatus.SENT
+    record["updated_at"] = datetime.now(timezone.utc).isoformat()
+    return record

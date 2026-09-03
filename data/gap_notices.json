@@ -1,0 +1,87 @@
+{
+  "a27f2a33-21fc-4ca3-b23d-9879a9af893f": {
+    "notice_id": "a27f2a33-21fc-4ca3-b23d-9879a9af893f",
+    "audit_id": "be171fb3-8ab5-46d9-a1be-ecaa88b7de08",
+    "supplier_name": "TP VISION EUROPE B.V.",
+    "status": "SENT",
+    "failed_rules": [
+      "OLD_ISSUE_DATE",
+      "NO_SKU_MATCH",
+      "OBSOLETE_SAFETY_STANDARD",
+      "OBSOLETE_SAFETY_STANDARD",
+      "OBSOLETE_ROHS_STANDARD"
+    ],
+    "evidence": [
+      "01.06.2020",
+      "PHILIPS SHB3075YY/XX",
+      "EN 60065:2014 +A11:2017, EN 55032:2015, EN 55020:2007+A12:2016, EN 61000-3-2:2014, EN 61000-3-3:2013, EN 301 489-1 V2.1.1, EN 301 489-17 V3.1.1, EN 300 328 V2.1.1, EN 62479:2010, EN 50581:2012, 2014/53/EU(Radio Equipment), 2011/65/EU(RoHS)",
+      "EN 60065:2014 +A11:2017, EN 55032:2015, EN 55020:2007+A12:2016, EN 61000-3-2:2014, EN 61000-3-3:2013, EN 301 489-1 V2.1.1, EN 301 489-17 V3.1.1, EN 300 328 V2.1.1, EN 62479:2010, EN 50581:2012, 2014/53/EU(Radio Equipment), 2011/65/EU(RoHS)",
+      "EN 60065:2014 +A11:2017, EN 55032:2015, EN 55020:2007+A12:2016, EN 61000-3-2:2014, EN 61000-3-3:2013, EN 301 489-1 V2.1.1, EN 301 489-17 V3.1.1, EN 300 328 V2.1.1, EN 62479:2010, EN 50581:2012, 2014/53/EU(Radio Equipment), 2011/65/EU(RoHS)"
+    ],
+    "corrective_action": "Please provide updated documentation addressing the identified compliance gaps, including a valid issue date, matching SKU, and compliance with current safety and RoHS standards.",
+    "editable_email_draft": "Subject: Request for Updated Documentation\n\nDear TP VISION EUROPE B.V.,\n\nI hope this message finds you well. \n\nWe have recently reviewed the documentation for the product PHILIPS SHB3075YY/XX (Document Reference: HK-WK1912-SHB3075 2019/03) and, unfortunately, it has been rejected due to several compliance gaps. The identified issues include:\n\n1. Document issue date exceeds configured baseline age.\n2. Extracted part numbers did not match any catalog SKU.\n3. Withdrawn safety standards cited.\n4. Withdrawn RoHS standard cited.\n\nTo proceed, we kindly request that you provide updated documentation addressing these compliance gaps, including a valid issue date, matching SKU, and compliance with current safety and RoHS standards.\n\nThank you for your attention to this matter. We look forward to your prompt response.\n\nBest regards,\n\nAkansha \n[Your Position]  \n[Your Company]  \n[Your Contact Information]",
+    "created_at": "2026-09-03T07:23:43.876697+00:00",
+    "updated_at": "2026-09-03T07:27:51.158676+00:00",
+    "approved_by": "Lead Auditor",
+    "approved_at": "2026-09-03T07:27:43.655487+00:00"
+  },
+  "286f20b0-1daa-4b34-a1c7-6afbcd4c5305": {
+    "notice_id": "286f20b0-1daa-4b34-a1c7-6afbcd4c5305",
+    "audit_id": "56c680f0-d373-4bf5-aa56-dab65bb84654",
+    "supplier_name": "Belkin International, Inc.",
+    "status": "SENT",
+    "failed_rules": [
+      "OLD_ISSUE_DATE",
+      "NO_SKU_MATCH",
+      "OBSOLETE_SAFETY_STANDARD"
+    ],
+    "evidence": [
+      "19 March 2020",
+      "BP0001/PB0001, BPB001btBK, BPB001btWH, PB0001btC1, PB0001btC2, PB0001btC3, PB0001btC1-PBB",
+      "Withdrawn safety standard cited: EN 60950-1:2005+A1:2009+A2:2013"
+    ],
+    "corrective_action": "Please provide updated documentation that addresses the identified compliance gaps, including a current issue date, matching SKUs, and compliance with the latest safety standards.",
+    "editable_email_draft": "Subject: Request for Updated Documentation\n\nDear Belkin International, Inc.,\n\nI hope this message finds you well. \n\nWe have completed our review of the documentation associated with your products (SKU: BP0001, PB0001, BPB001btBK, BPB001btWH, PB0001btC1, PB0001btC2, PB0001btC3, PB0001btC1-PBB) and have identified several compliance gaps that need to be addressed:\n\n1. The document issue date exceeds the configured baseline age (19 March 2020).\n2. The extracted part numbers did not match any catalog SKU.\n3. A withdrawn safety standard was cited (EN 60950-1:2005+A1:2009+A2:2013).\n\nTo proceed, we kindly request that you provide updated documentation that resolves these issues, including a current issue date, matching SKUs, and compliance with the latest safety standards.\n\nThank you for your attention to this matter. We look forward to your prompt response.\n\nBest regards,\n\nAkansha Verma\nAI Consultant\n[Your Company]  \n[Your Contact Information]",
+    "created_at": "2026-09-03T07:42:27.295868+00:00",
+    "updated_at": "2026-09-03T07:43:33.970911+00:00",
+    "approved_by": "Lead Auditor",
+    "approved_at": "2026-09-03T07:43:31.792326+00:00"
+  },
+  "572ad801-8297-4800-8a3b-95e66c67845c": {
+    "notice_id": "572ad801-8297-4800-8a3b-95e66c67845c",
+    "audit_id": "677edac3-6dbf-4f7e-ad5c-43516371aa5c",
+    "supplier_name": "Apex Display Systems Inc.",
+    "status": "SENT",
+    "failed_rules": [
+      "SUSPICIOUS_LABORATORY"
+    ],
+    "evidence": [
+      "Lab Accreditation No: FAKE-ACC-000"
+    ],
+    "corrective_action": "Please provide updated documentation with a valid laboratory accreditation ID.",
+    "editable_email_draft": "Subject: Request for Updated Documentation\n\nDear Apex Display Systems Inc.,\n\nI hope this message finds you well. \n\nWe have completed our review of the documentation submitted for the product referenced as CERT-FAKE-99042. Unfortunately, we must inform you that the submission has been rejected due to compliance issues identified during our evaluation.\n\nSpecifically, we found a critical issue related to the laboratory accreditation ID, which is currently unrecognized or suspicious (ID: FAKE-ACC-000). To proceed, we kindly request that you provide updated documentation with a valid laboratory accreditation ID.\n\nThank you for your attention to this matter. We appreciate your prompt response to ensure compliance.\n\nBest regards,\n\nAkansha Verma\nAI Consultant\n+91-12121312313",
+    "created_at": "2026-09-03T07:46:08.521001+00:00",
+    "updated_at": "2026-09-03T07:46:50.984366+00:00",
+    "approved_by": "Lead Auditor",
+    "approved_at": "2026-09-03T07:46:49.942916+00:00"
+  },
+  "9084bd3d-1f94-46e6-8a6a-8fdbbcb811cf": {
+    "notice_id": "9084bd3d-1f94-46e6-8a6a-8fdbbcb811cf",
+    "audit_id": "539398d5-971e-4e3a-9e47-494f29aad9b5",
+    "supplier_name": "PowerMax Energy Ltd.",
+    "status": "SENT",
+    "failed_rules": [
+      "LEAD_EXCESS_VIOLATION"
+    ],
+    "evidence": [
+      "VIOLATION: Tested lead concentration (1450.0 ppm) exceeds maximum threshold (1000.0 ppm)",
+      "Tested Lead Content: 1450 ppm"
+    ],
+    "corrective_action": "Please provide updated documentation demonstrating compliance with the lead concentration requirements, ensuring that the lead content does not exceed 1000 ppm.",
+    "editable_email_draft": "Subject: Request for Updated Documentation - Compliance Gap\n\nDear PowerMax Energy Ltd.,\n\nI hope this message finds you well. \n\nWe have recently evaluated the documentation for your product referenced as ROHS-FAIL-2026-901 and unfortunately, it has been rejected due to a compliance gap identified in the lead concentration levels. Specifically, the tested lead concentration was found to be 1450 ppm, which exceeds the maximum allowable threshold of 1000 ppm.\n\nTo resolve this issue, we kindly request that you provide updated documentation demonstrating compliance with the lead concentration requirements. \n\nThank you for your attention to this matter. We look forward to your prompt response.\n\nBest regards,\n\nAkansha Verma\nAI Consultant\n[Your Company]  \n[Your Contact Information]",
+    "created_at": "2026-09-03T07:48:22.615180+00:00",
+    "updated_at": "2026-09-03T07:48:53.390279+00:00",
+    "approved_by": "Lead Auditor",
+    "approved_at": "2026-09-03T07:48:52.075460+00:00"
+  }
+}

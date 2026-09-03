@@ -7,7 +7,17 @@ import {
   ArrowLeft, CheckCircle, XCircle, FileText, 
   ShieldAlert, Mail, Send, UserCheck, Layers, FileSearch, SlidersHorizontal 
 } from 'lucide-react';
-import { fetchAuditLogs, submitReviewDecision, generateGapNotice, AuditLog } from '@/lib/api';
+import {
+  fetchAuditLogs,
+  submitReviewDecision,
+  generateGapNotice,
+  fetchGapNoticeByAudit,
+  editGapNotice,
+  approveGapNotice,
+  sendGapNotice,
+  AuditLog,
+  GapNoticeRecord,
+} from '@/lib/api';
 import { exportAuditLogsToCSV } from '@/lib/exportUtils';
 
 export default function AuditDetailPage() {
@@ -23,11 +33,19 @@ export default function AuditDetailPage() {
   // Active Tab State for comparison views
   const [activeTab, setActiveTab] = useState<'overview' | 'extracted' | 'policy'>('overview');
 
-  // Gap Notice Modal State (US-3.2)
+  // Gap Notice Modal State (US-3.2 / AC-17)
+  // gapNotice holds the persisted GapNoticeRecord (source of truth: the
+  // server). draftText is local textarea state so typing doesn't hit the
+  // network on every keystroke; it's only persisted when the reviewer
+  // clicks "Save Edit".
   const [showGapModal, setShowGapModal] = useState(false);
-  const [gapNoticeText, setGapNoticeText] = useState('');
+  const [gapNotice, setGapNotice] = useState<GapNoticeRecord | null>(null);
+  const [draftText, setDraftText] = useState('');
   const [noticeSent, setNoticeSent] = useState(false);
   const [loadingNotice, setLoadingNotice] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [gapNoticeError, setGapNoticeError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadAudit = async () => {
@@ -71,13 +89,26 @@ export default function AuditDetailPage() {
     });
   };
 
-  // Shared by the auto-generate-on-reject flow AND the "View Draft" button, so reopening
-  // the modal after a page reload regenerates the draft instead of showing it empty.
+  // Shared by the auto-generate-on-reject flow AND the "View Draft" button.
+  // First checks whether a gap notice already exists (persisted) for this
+  // audit_id — if a reviewer already drafted, edited, or approved one, that
+  // exact record is shown instead of silently regenerating a fresh draft
+  // and losing prior work (AC-17 #1, #5).
   const loadGapNotice = async (record: AuditLog) => {
+    if (!record.RecordID) return;
     setLoadingNotice(true);
+    setGapNoticeError(null);
     try {
+      const existing = await fetchGapNoticeByAudit(record.RecordID);
+      if (existing) {
+        setGapNotice(existing);
+        setDraftText(existing.editable_email_draft);
+        return;
+      }
+
       const validSku = record.SKU && record.SKU !== 'UNMATCHED' ? record.SKU : null;
       const gapNoticeRes = await generateGapNotice({
+        audit_id: record.RecordID,
         audit_result: {
           decision: record.Decision,
           score: record.Score,
@@ -89,16 +120,59 @@ export default function AuditDetailPage() {
         supplier_name: record.Supplier || 'Supplier',
         associated_sku: validSku,
       });
-      setGapNoticeText(gapNoticeRes.draft);
+
+      if (gapNoticeRes.record) {
+        setGapNotice(gapNoticeRes.record);
+        setDraftText(gapNoticeRes.record.editable_email_draft);
+      } else {
+        // "No gap notice required" case (e.g. decision was APPROVED) — nothing persisted.
+        setGapNotice(null);
+        setDraftText(gapNoticeRes.message || 'No gap notice required for this record.');
+      }
     } catch (gapErr) {
-      console.error('Failed to generate gap notice:', gapErr);
-      setGapNoticeText(
+      console.error('Failed to load/generate gap notice:', gapErr);
+      setGapNotice(null);
+      setDraftText(
         `SUPPLIER CORRECTIVE ACTION NOTICE\n\n` +
         `Document: ${record["File Name"]}\nSupplier: ${record.Supplier || 'N/A'}\nSKU: ${record.SKU || 'N/A'}\n\n` +
         `Reason: ${record.Flags || 'Failed compliance check.'}`
       );
+      setGapNoticeError('Could not reach the gap-notice service — showing a local fallback draft that will not be saved.');
     } finally {
       setLoadingNotice(false);
+    }
+  };
+
+  const handleSaveDraftEdit = async () => {
+    if (!gapNotice) return;
+    setSavingEdit(true);
+    setGapNoticeError(null);
+    try {
+      const updated = await editGapNotice(gapNotice.notice_id, {
+        editable_email_draft: draftText,
+        corrective_action: gapNotice.corrective_action,
+      });
+      setGapNotice(updated);
+    } catch (err) {
+      console.error('Failed to save gap notice edit:', err);
+      setGapNoticeError('Failed to save your edits. Please try again.');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleApproveGapNotice = async () => {
+    if (!gapNotice) return;
+    setApproving(true);
+    setGapNoticeError(null);
+    try {
+      const approved = await approveGapNotice(gapNotice.notice_id, 'Lead Auditor');
+      setGapNotice(approved);
+    } catch (err) {
+      console.error('Failed to approve gap notice:', err);
+      setGapNoticeError('Failed to approve the notice. Please try again.');
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -137,13 +211,33 @@ export default function AuditDetailPage() {
     }
   };
 
-  const handleSendGapNotice = () => {
+  // Requires the record to already be APPROVED_FOR_SENDING (enforced server-side
+  // too). This persists status -> SENT, but is still an honestly-simulated
+  // dispatch under the hood — no email/SMTP/SendGrid integration exists yet.
+  const handleSendGapNotice = async () => {
+    if (!gapNotice) return;
     setNoticeSent(true);
-    setTimeout(() => {
+    setGapNoticeError(null);
+    try {
+      const { record, telegram_notification } = await sendGapNotice(gapNotice.notice_id);
+      setGapNotice(record);
       setShowGapModal(false);
+      const telegramLine =
+        telegram_notification === 'notified'
+          ? "\n\nInternal team was notified via Telegram."
+          : telegram_notification === 'failed'
+          ? "\n\n(Telegram notification attempted but failed — check TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID.)"
+          : "";
+      alert(
+        "Supplier Gap Notice marked as sent (simulated — no email was actually dispatched)." +
+        telegramLine
+      );
+    } catch (err) {
+      console.error('Failed to send gap notice:', err);
+      setGapNoticeError(err instanceof Error ? err.message : 'Failed to send the notice.');
+    } finally {
       setNoticeSent(false);
-      alert("Supplier Gap Notice sent successfully!");
-    }, 800);
+    }
   };
 
   const handleExport = () => {
@@ -311,6 +405,12 @@ export default function AuditDetailPage() {
                     <span className="text-xs text-on-surface-variant block">Automated Decision</span>
                     <span className="font-medium text-on-surface">{audit.Decision || "N/A"}</span>
                   </div>
+                  <div>
+                    <span className="text-xs text-on-surface-variant block">Gap Notice Status</span>
+                    <span className="font-medium text-on-surface">
+                      {audit.GapNoticeStatus ? audit.GapNoticeStatus.replace(/_/g, ' ') : "Not drafted"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -320,7 +420,7 @@ export default function AuditDetailPage() {
                   <button 
                     onClick={() => {
                       setShowGapModal(true);
-                      if (!gapNoticeText && audit) {
+                      if (!gapNotice && audit) {
                         loadGapNotice(audit);
                       }
                     }}
@@ -412,7 +512,7 @@ export default function AuditDetailPage() {
 
         </div>
 
-        {/* Dynamic AI Gap Notice Modal (US-3.2) */}
+        {/* Dynamic AI Gap Notice Modal (US-3.2 / AC-17 lifecycle) */}
         {showGapModal && (
           <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-surface-container-lowest w-full max-w-2xl rounded-xl border border-outline-variant shadow-xl p-6 flex flex-col gap-4">
@@ -420,30 +520,85 @@ export default function AuditDetailPage() {
                 <h3 className="text-lg font-bold text-on-surface flex items-center gap-2">
                   <Mail size={20} className="text-primary" /> Generated Supplier Gap Notice
                 </h3>
-                <button onClick={() => setShowGapModal(false)} className="text-on-surface-variant hover:text-on-surface font-bold">✕</button>
+                <div className="flex items-center gap-3">
+                  {gapNotice && (
+                    <span className={`px-2.5 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${
+                      gapNotice.status === 'SENT' ? 'bg-tertiary/10 text-tertiary' :
+                      gapNotice.status === 'APPROVED_FOR_SENDING' ? 'bg-primary/10 text-primary' :
+                      gapNotice.status === 'EDITED' ? 'bg-secondary-container text-on-secondary-container' :
+                      'bg-surface-container text-on-surface-variant'
+                    }`}>
+                      {gapNotice.status.replace(/_/g, ' ')}
+                    </span>
+                  )}
+                  <button onClick={() => setShowGapModal(false)} className="text-on-surface-variant hover:text-on-surface font-bold">✕</button>
+                </div>
               </div>
 
               {loadingNotice ? (
                 <div className="h-56 flex items-center justify-center text-sm text-on-surface-variant animate-pulse">
-                  Drafting supplier notice using API endpoint...
+                  Checking for an existing draft / drafting via API...
                 </div>
               ) : (
                 <textarea 
-                  value={gapNoticeText}
-                  onChange={(e) => setGapNoticeText(e.target.value)}
-                  className="w-full h-56 p-3 bg-surface-container border border-outline-variant rounded-lg font-code-sm text-sm text-on-surface focus:outline-none focus:border-primary resize-none"
+                  value={draftText}
+                  onChange={(e) => setDraftText(e.target.value)}
+                  disabled={!gapNotice || gapNotice.status === 'SENT'}
+                  className="w-full h-56 p-3 bg-surface-container border border-outline-variant rounded-lg font-code-sm text-sm text-on-surface focus:outline-none focus:border-primary resize-none disabled:opacity-70"
                 />
               )}
 
-              <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setShowGapModal(false)} className="px-4 py-2 border border-outline-variant text-on-surface rounded-lg text-sm font-medium">Cancel</button>
-                <button 
-                  onClick={handleSendGapNotice}
-                  disabled={noticeSent || loadingNotice}
-                  className="flex items-center gap-2 px-5 py-2 bg-primary text-on-primary rounded-lg text-sm font-medium shadow-sm disabled:opacity-50"
-                >
-                  <Send size={16} /> {noticeSent ? "Sending Notice..." : "Send Notice to Supplier"}
+              {gapNoticeError && (
+                <p className="text-xs text-error">{gapNoticeError}</p>
+              )}
+
+              {gapNotice && gapNotice.status !== 'SENT' && (
+                <p className="text-xs text-on-surface-variant">
+                  Last saved {new Date(gapNotice.updated_at).toLocaleString()}
+                  {gapNotice.approved_by ? ` · Approved by ${gapNotice.approved_by}` : ''}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-3 pt-2 flex-wrap">
+                <button onClick={() => setShowGapModal(false)} className="px-4 py-2 border border-outline-variant text-on-surface rounded-lg text-sm font-medium">
+                  Close
                 </button>
+
+                {gapNotice && gapNotice.status !== 'SENT' && draftText !== gapNotice.editable_email_draft && (
+                  <button
+                    onClick={handleSaveDraftEdit}
+                    disabled={savingEdit}
+                    className="px-4 py-2 border border-outline-variant text-on-surface rounded-lg text-sm font-medium disabled:opacity-50"
+                  >
+                    {savingEdit ? "Saving..." : "Save Edit"}
+                  </button>
+                )}
+
+                {gapNotice && (gapNotice.status === 'DRAFT' || gapNotice.status === 'EDITED') && (
+                  <button
+                    onClick={handleApproveGapNotice}
+                    disabled={approving}
+                    className="flex items-center gap-2 px-4 py-2 bg-secondary-container text-on-secondary-container rounded-lg text-sm font-medium disabled:opacity-50"
+                  >
+                    <UserCheck size={16} /> {approving ? "Approving..." : "Approve for Sending"}
+                  </button>
+                )}
+
+                {gapNotice && gapNotice.status === 'APPROVED_FOR_SENDING' && (
+                  <button 
+                    onClick={handleSendGapNotice}
+                    disabled={noticeSent}
+                    className="flex items-center gap-2 px-5 py-2 bg-primary text-on-primary rounded-lg text-sm font-medium shadow-sm disabled:opacity-50"
+                  >
+                    <Send size={16} /> {noticeSent ? "Sending Notice..." : "Send Notice to Supplier"}
+                  </button>
+                )}
+
+                {gapNotice && gapNotice.status === 'SENT' && (
+                  <span className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-tertiary">
+                    <CheckCircle size={16} /> Sent (simulated — no email provider wired up)
+                  </span>
+                )}
               </div>
             </div>
           </div>

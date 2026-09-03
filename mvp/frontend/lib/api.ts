@@ -16,6 +16,10 @@ export interface AuditLog {
   Flags: string;
   ReviewStatus?: string;
   Reviewer?: string;
+  // Joined in at read time from the gap-notice store (see server.py
+  // get_audit_ledger()). Empty string when no gap notice has been drafted
+  // for this record yet.
+  GapNoticeStatus?: GapNoticeStatus | "";
 }
 
 export async function fetchAuditLogs(): Promise<AuditLog[]> {
@@ -65,12 +69,40 @@ export async function submitReviewDecision(
   return response.json();
 }
 
+// Mirrors agent/schemas.py::GapNoticeStatus / GapNoticeRecord.
+export type GapNoticeStatus = "DRAFT" | "EDITED" | "APPROVED_FOR_SENDING" | "SENT";
+
+export interface GapNoticeRecord {
+  notice_id: string;
+  audit_id: string;
+  supplier_name: string;
+  status: GapNoticeStatus;
+  failed_rules: string[];
+  evidence: string[];
+  corrective_action: string | null;
+  editable_email_draft: string;
+  created_at: string;
+  updated_at: string;
+  approved_by: string | null;
+  approved_at: string | null;
+}
+
+interface CreateGapNoticeResponse {
+  record: GapNoticeRecord | null;
+  created: boolean;
+  message?: string;
+}
+
+// Idempotent per audit_id: if a notice already exists for this audit, the
+// persisted record is returned as-is (with any prior edits/approval state)
+// instead of generating a throwaway draft every time the modal is opened.
 export async function generateGapNotice(params: {
+  audit_id: string;
   audit_result: any;
   extracted: any;
   supplier_name?: string;
   associated_sku?: string | null;
-}): Promise<{ draft: string }> {
+}): Promise<CreateGapNoticeResponse> {
   const response = await fetch(`${API_BASE_URL}/gap-notice`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -79,6 +111,73 @@ export async function generateGapNotice(params: {
 
   if (!response.ok) {
     throw new Error(`Failed to generate gap notice: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+// Returns null (rather than throwing) when no notice exists yet for this
+// audit, so callers can use it as a plain existence check.
+export async function fetchGapNoticeByAudit(auditId: string): Promise<GapNoticeRecord | null> {
+  const response = await fetch(`${API_BASE_URL}/gap-notice/by-audit/${auditId}`);
+
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(`Failed to fetch gap notice: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export async function editGapNotice(
+  noticeId: string,
+  updates: { editable_email_draft: string; corrective_action?: string | null }
+): Promise<GapNoticeRecord> {
+  const response = await fetch(`${API_BASE_URL}/gap-notice/${noticeId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to save gap notice edits: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export async function approveGapNotice(noticeId: string, reviewerId: string): Promise<GapNoticeRecord> {
+  const response = await fetch(`${API_BASE_URL}/gap-notice/${noticeId}/approve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reviewer_id: reviewerId }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to approve gap notice: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+// Marks the notice SENT server-side. `dispatch_status` (supplier delivery)
+// stays "simulated" — no email provider is wired up. `telegram_notification`
+// reports whether the best-effort internal Telegram alert (same Bot API
+// pattern as the Round 1 n8n POC) went out: "notified" | "failed" | "not_configured".
+export async function sendGapNotice(noticeId: string): Promise<{
+  record: GapNoticeRecord;
+  dispatch_status: string;
+  telegram_notification: 'notified' | 'failed' | 'not_configured';
+}> {
+  const response = await fetch(`${API_BASE_URL}/gap-notice/${noticeId}/send`, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.detail || `Failed to send gap notice: ${response.statusText}`);
   }
 
   return response.json();

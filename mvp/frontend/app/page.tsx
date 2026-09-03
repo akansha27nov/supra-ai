@@ -34,17 +34,24 @@ export default function DashboardPage() {
   const [reviewer, setReviewer] = useState("Executive Reviewer");
 
   const handleGenerateGapNotice = async () => {
-    if (!auditResult) return;
+    if (!auditResult?.record_id) return;
     setGapNoticeLoading(true);
     setGapNoticeError(null);
     try {
-      const { draft } = await generateGapNotice({
+      // generateGapNotice is idempotent per audit_id now: if this audit
+      // already has a persisted notice (e.g. drafted from the audit detail
+      // page), that record comes back instead of a fresh regeneration.
+      // Full edit/approve/send lifecycle for that record lives on the audit
+      // detail page — this upload-flow preview stays a quick, unsaved
+      // scratch draft, so we only surface the editable_email_draft text here.
+      const { record, message } = await generateGapNotice({
+        audit_id: auditResult.record_id,
         audit_result: auditResult.audit_result || {},
         extracted: auditResult.extracted || {},
         supplier_name: auditResult.extracted?.supplier_name || "Supplier",
         associated_sku: auditResult.associated_sku ?? null,
       });
-      setGapNotice(draft);
+      setGapNotice(record?.editable_email_draft ?? message ?? "No gap notice required for this record.");
     } catch (err) {
       console.error("Failed to generate gap notice:", err);
       setGapNoticeError("Couldn't generate a gap notice. Try again.");

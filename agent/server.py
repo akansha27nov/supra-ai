@@ -13,9 +13,27 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from agent.gap_notice import generate_supplier_gap_notice
+from agent.gap_notice import (
+    approve_gap_notice_for_sending,
+    create_gap_notice_record,
+    generate_supplier_gap_notice,
+    send_gap_notice,
+    update_gap_notice_draft,
+)
+from agent.gap_notice_store import (
+    get_record,
+    get_record_by_audit_id,
+    list_records,
+    save_record,
+)
 from agent.graph import graph
 from agent.run_pdf import append_to_master_csv, load_sku_catalog
+from agent.schemas import ApproveGapNoticeRequest, GapNoticeStatus, UpdateGapNoticeRequest
+from agent.telegram_dispatch import (
+    TelegramNotConfigured,
+    is_configured as is_telegram_configured,
+    send_gap_notice_sent_alert,
+)
 
 app = FastAPI(title="Compliance Audit API")
 
@@ -79,6 +97,7 @@ class ReviewDecisionRequest(BaseModel):
 
 
 class GapNoticeRequest(BaseModel):
+    audit_id: str
     audit_result: dict
     extracted: dict
     supplier_name: str = "Supplier"
@@ -155,7 +174,15 @@ async def audit_uploaded_pdf(file: UploadFile = File(...)):   # noqa: B008
 async def get_audit_ledger():
     """Returns past audit logs from the master CSV ledger.
     Normalizes column names so the frontend always receives `SKU` (not
-    `Associated SKU`), keeping the AuditLog interface stable."""
+    `Associated SKU`), keeping the AuditLog interface stable.
+
+    Also joins in each row's gap-notice lifecycle status (AC-17 #6) by
+    looking it up in the gap-notice store keyed by RecordID == audit_id, at
+    read time rather than writing it into the CSV. The ledger is written once
+    at audit time by append_to_master_csv(), before any gap notice can exist,
+    so a written-in status column would immediately go stale the moment a
+    reviewer edited/approved/sent the notice; a live lookup can't drift out
+    of sync with the gap-notice store the way a duplicated column could."""
     csv_path = LOG_DIR / "master_audit_ledger.csv"
     if not csv_path.exists():
         return []
@@ -167,7 +194,24 @@ async def get_audit_ledger():
     if "Associated SKU" in df.columns and "SKU" not in df.columns:
         df = df.rename(columns={"Associated SKU": "SKU"})
 
-    return df.to_dict(orient="records")
+    records = df.to_dict(orient="records")
+
+    # Join in gap-notice status per record, when one exists. list_records()
+    # once + an in-memory index avoids one store read per ledger row.
+    notices_by_audit_id: dict[str, dict] = {}
+    for notice in list_records():
+        audit_id = notice.get("audit_id")
+        if not audit_id:
+            continue
+        existing = notices_by_audit_id.get(audit_id)
+        if existing is None or notice.get("updated_at", "") > existing.get("updated_at", ""):
+            notices_by_audit_id[audit_id] = notice
+
+    for record in records:
+        notice = notices_by_audit_id.get(str(record.get("RecordID", "")))
+        record["GapNoticeStatus"] = notice.get("status") if notice else ""
+
+    return records
 
 
 @app.patch("/api/logs/{record_id}/review")
@@ -231,19 +275,23 @@ async def submit_review_decision(
 
 @app.post("/api/gap-notice")
 async def create_gap_notice(body: GapNoticeRequest):
-    """Generates a draft supplier gap-notice email from an existing audit result.
-    A human reviewer edits/approves this before it's actually sent — this endpoint
-    only drafts it, it never sends anything itself.
+    """Creates (or returns the existing) persisted gap-notice record for an audit.
 
-    generate_supplier_gap_notice() now returns a structured dict (StructuredGapNotice:
-    supplier_name, document_reference, failed_rules, evidence, corrective_action,
-    email_draft) rather than a plain string. The frontend's gap-notice textarea is bound
-    to a plain string field, so passing the dict straight through as `draft` renders
-    "[object Object]" instead of the email. Flatten it here: `draft` stays a string
-    (the editable email body, for backward compatibility with the existing textarea),
-    and the full structured notice is included separately for any UI that wants to show
-    the itemized failed_rules/evidence/corrective_action instead of just free text.
+    Previously this endpoint only ever called the LLM and handed back a
+    throwaway draft — nothing was written down anywhere. Reopening the modal
+    for the same audit regenerated a brand-new draft every time, edits made
+    in the browser vanished on refresh, and there was no way to ask "does a
+    gap notice already exist for this audit?" (AC-17 #1, #5).
+
+    This is now idempotent per audit_id: if a record already exists it's
+    returned as-is — including whatever edits or approval state a reviewer
+    already made — and a fresh one is only generated and persisted the first
+    time this audit is seen.
     """
+    existing = get_record_by_audit_id(body.audit_id)
+    if existing:
+        return {"record": existing, "created": False}
+
     result = generate_supplier_gap_notice(
         audit_result=body.audit_result,
         extracted_data=body.extracted,
@@ -251,8 +299,131 @@ async def create_gap_notice(body: GapNoticeRequest):
         associated_sku=body.associated_sku,
     )
 
-    if isinstance(result, dict):
-        return {"draft": result.get("email_draft", ""), "structured_notice": result}
+    if not isinstance(result, dict):
+        # "No gap notice required..." early-return case — nothing to persist.
+        return {"record": None, "created": False, "message": result}
 
-    # "No gap notice required..." early-return cases are still plain strings.
-    return {"draft": result, "structured_notice": None}
+    record = create_gap_notice_record(
+        audit_id=body.audit_id,
+        supplier_name=body.supplier_name,
+        structured_notice=result,
+    )
+    save_record(record)
+    return {"record": record, "created": True}
+
+
+@app.get("/api/gap-notice/by-audit/{audit_id}")
+async def get_gap_notice_by_audit(audit_id: str):
+    """Lets the UI check "does a gap notice already exist for this audit?"
+    before generating a fresh one (AC-17 #5). Placed before the /{notice_id}
+    route below so "by-audit" isn't swallowed as a literal notice_id."""
+    record = get_record_by_audit_id(audit_id)
+    if not record:
+        raise HTTPException(
+            status_code=404, detail=f"No gap notice found for audit {audit_id}"
+        )
+    return record
+
+
+@app.get("/api/gap-notice/{notice_id}")
+async def get_gap_notice(notice_id: str):
+    """Retrieval by notice_id (AC-17 #2 — previously nothing implemented this,
+    even though notice_id was generated on every record)."""
+    record = get_record(notice_id)
+    if not record:
+        raise HTTPException(
+            status_code=404, detail=f"No gap notice found with id {notice_id}"
+        )
+    return record
+
+
+@app.patch("/api/gap-notice/{notice_id}")
+async def edit_gap_notice(notice_id: str, body: UpdateGapNoticeRequest):
+    """Persists a reviewer's edits to the draft and moves status -> EDITED
+    (AC-17 #3). Previously update_gap_notice_draft() was never called from a
+    route, so edits only ever lived in React state and vanished on refresh."""
+    record = get_record(notice_id)
+    if not record:
+        raise HTTPException(
+            status_code=404, detail=f"No gap notice found with id {notice_id}"
+        )
+
+    updated = update_gap_notice_draft(record, body.model_dump())
+    save_record(updated)
+    return updated
+
+
+@app.post("/api/gap-notice/{notice_id}/approve")
+async def approve_gap_notice(notice_id: str, body: ApproveGapNoticeRequest):
+    """Records that a compliance officer signed off on the current version
+    and moves status -> APPROVED_FOR_SENDING (AC-17 #4). Previously
+    approve_gap_notice_for_sending() was never called from a route, so this
+    lifecycle state was unreachable from the running system."""
+    record = get_record(notice_id)
+    if not record:
+        raise HTTPException(
+            status_code=404, detail=f"No gap notice found with id {notice_id}"
+        )
+
+    approved = approve_gap_notice_for_sending(record, body.reviewer_id)
+    save_record(approved)
+    return approved
+
+
+@app.post("/api/gap-notice/{notice_id}/send")
+async def send_gap_notice_endpoint(notice_id: str):
+    """Moves status -> SENT (AC-17 #7 — SENT was defined in the enum but had
+    no transition that could reach it). Requires APPROVED_FOR_SENDING first.
+
+    IMPORTANT: `dispatch_status` here refers to *supplier* delivery, and
+    stays "simulated" — there is still no real email/SMTP/SendGrid
+    integration wired up anywhere in this codebase (AC-17 #8, left as an
+    explicit, separate, lower-priority gap).
+
+    Separately, if TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID are configured
+    (same Bot API pattern as the Round 1 n8n POC's "Telegram High-Risk
+    Alert" node), a best-effort internal notification is posted to that
+    chat confirming the notice was marked SENT — `telegram_notification`
+    in the response reports whether that succeeded. This is a team-visibility
+    alert only, not a supplier-facing send, and its failure never blocks or
+    rolls back the SENT transition above, which is already persisted by the
+    time it's attempted.
+    """
+    record = get_record(notice_id)
+    if not record:
+        raise HTTPException(
+            status_code=404, detail=f"No gap notice found with id {notice_id}"
+        )
+
+    if record.get("status") != GapNoticeStatus.APPROVED_FOR_SENDING:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Cannot send notice in status '{record.get('status')}'; "
+                "it must be APPROVED_FOR_SENDING first."
+            ),
+        )
+
+    try:
+        sent = send_gap_notice(record)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    save_record(sent)
+
+    telegram_notification = "not_configured"
+    if is_telegram_configured():
+        try:
+            send_gap_notice_sent_alert(sent)
+            telegram_notification = "notified"
+        except TelegramNotConfigured:
+            telegram_notification = "not_configured"
+        except Exception as exc:  # noqa: BLE001 - best-effort side channel
+            print(f"[gap-notice] Telegram alert failed for {notice_id}: {exc}")
+            telegram_notification = "failed"
+
+    return {
+        "record": sent,
+        "dispatch_status": "simulated",
+        "telegram_notification": telegram_notification,
+    }

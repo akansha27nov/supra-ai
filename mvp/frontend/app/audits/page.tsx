@@ -142,16 +142,17 @@ export default function AuditsPage() {
                     <th className="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">DOCUMENT / FLAGS</th>
                     <th className="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">DATE SUBMITTED</th>
                     <th className="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">RISK SCORE & STATUS</th>
+                    <th className="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">GAP NOTICE</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant font-body-sm text-body-sm text-on-surface">
                   {loading ? (
                     <tr>
-                      <td colSpan={5} className="text-center py-8 text-on-surface-variant">Loading audit queue from API...</td>
+                      <td colSpan={6} className="text-center py-8 text-on-surface-variant">Loading audit queue from API...</td>
                     </tr>
                   ) : filteredLogs.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center py-8 text-on-surface-variant">No audit records found matching your filters.</td>
+                      <td colSpan={6} className="text-center py-8 text-on-surface-variant">No audit records found matching your filters.</td>
                     </tr>
                   ) : (
                     filteredLogs.map((log: any, index: number) => {
@@ -195,6 +196,20 @@ export default function AuditsPage() {
                               <span className={`w-2 h-2 rounded-full flex-shrink-0 ${riskColor}`}></span>
                               {riskScore} ({effectiveStatus})
                             </div>
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            {log.GapNoticeStatus ? (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${
+                                log.GapNoticeStatus === 'SENT' ? 'bg-tertiary/10 text-tertiary' :
+                                log.GapNoticeStatus === 'APPROVED_FOR_SENDING' ? 'bg-primary/10 text-primary' :
+                                log.GapNoticeStatus === 'EDITED' ? 'bg-secondary-container text-on-secondary-container' :
+                                'bg-surface-container text-on-surface-variant'
+                              }`}>
+                                {log.GapNoticeStatus.replace(/_/g, ' ')}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-on-surface-variant">—</span>
+                            )}
                           </td>
                         </tr>
                       );
