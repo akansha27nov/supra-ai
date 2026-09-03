@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import ViolationCard from '@/components/ViolationCard';
-import { 
-  ArrowLeft, CheckCircle, XCircle, FileText, 
+import {
+  ArrowLeft, CheckCircle, XCircle, FileText, Bot,
   ShieldAlert, Mail, Send, UserCheck, Layers, FileSearch, SlidersHorizontal,
 } from 'lucide-react';
 import {
@@ -20,6 +20,7 @@ import {
   GapNoticeRecord,
 } from '@/lib/api';
 import { exportAuditLogsToCSV } from '@/lib/exportUtils';
+import CopilotChatPanel from '@/components/CopilotChatPanel';
 
 export default function AuditDetailPage() {
   const router = useRouter();
@@ -31,7 +32,7 @@ export default function AuditDetailPage() {
   const [loading, setLoading] = useState(true);
   const [currentDecision, setCurrentDecision] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [showCopilot, setShowCopilot] = useState(false);
   // Active Tab State for comparison views
   const [activeTab, setActiveTab] = useState<'overview' | 'extracted' | 'policy'>('overview');
 
@@ -306,6 +307,16 @@ export default function AuditDetailPage() {
             >
               <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>download</span>
               Export CSV
+            </button>
+            <button
+              onClick={() => setShowCopilot((prev) => !prev)}
+              className={`flex items-center gap-2 px-3 py-2 border border-outline-variant rounded text-sm font-medium transition-colors shadow-sm ${
+                showCopilot
+                  ? 'bg-primary text-on-primary'
+                  : 'bg-surface-container-highest text-on-surface hover:bg-surface-container'
+              }`}
+            >
+              <Bot size={16} /> Ask Co-pilot
             </button>
 
             {isPending ? (
@@ -631,6 +642,12 @@ export default function AuditDetailPage() {
             </div>
           </div>
         )}
+        <CopilotChatPanel
+          recordId={audit.RecordID}
+          supplierName={audit.Supplier}
+          isOpen={showCopilot}
+          onClose={() => setShowCopilot(false)}
+        />
       </main>
     </div>
   );

@@ -188,6 +188,29 @@ def update_review_status(record_id: str, decision: str, reviewer: str | None) ->
         )
         return cur.rowcount > 0
 
+def get_audit_record(record_id: str) -> dict[str, Any] | None:
+    """Single-row lookup for the copilot chat endpoint — avoids fetching the
+    entire ledger just to answer a question about one document."""
+    with _cursor() as cur:
+        cur.execute(
+            """
+            SELECT record_id AS "RecordID", file_name AS "File Name",
+                   supplier AS "Supplier", associated_sku AS "SKU",
+                   sku_match_status AS "SKU Match Status",
+                   decision AS "Decision", score AS "Score",
+                   flags_detail AS "FlagsDetail",
+                   review_status AS "ReviewStatus"
+            FROM audit_ledger WHERE record_id = %s;
+            """,
+            (record_id,),
+        )
+        row = cur.fetchone()
+    if not row:
+        return None
+    record = dict(row)
+    if not isinstance(record.get("FlagsDetail"), list):
+        record["FlagsDetail"] = record.get("FlagsDetail") or []
+    return record
 
 # ---------------------------------------------------------------------------
 # Gap notices (replaces data/gap_notices.json)

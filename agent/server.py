@@ -32,6 +32,7 @@ from agent.telegram_dispatch import (
     is_configured as is_telegram_configured,
     send_gap_notice_sent_alert,
 )
+from agent.copilot import ask_copilot
 
 app = FastAPI(title="Compliance Audit API")
 
@@ -70,6 +71,14 @@ class GapNoticeRequest(BaseModel):
     supplier_name: str = "Supplier"
     associated_sku: str | None = None
 
+class CopilotChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class CopilotChatRequest(BaseModel):
+    message: str
+    history: list[CopilotChatMessage] = []
 
 @app.post("/api/audit")
 async def audit_uploaded_pdf(file: UploadFile = File(...)):   # noqa: B008
@@ -362,3 +371,18 @@ async def send_gap_notice_endpoint(notice_id: str):
         "dispatch_status": "simulated",
         "telegram_notification": telegram_notification,
     }
+
+@app.post("/api/logs/{record_id}/chat")
+async def copilot_chat(record_id: str, body: CopilotChatRequest):
+    record = db.get_audit_record(record_id)
+    if not record:
+        raise HTTPException(status_code=404, detail=f"No audit record found with id {record_id}")
+
+    gap_notice = get_record_by_audit_id(record_id)  # already imported at top of server.py
+
+    try:
+        answer = ask_copilot(record=record, gap_notice=gap_notice, question=body.message,
+                              history=[m.model_dump() for m in body.history])
+    except ExtractionFailedError as e:
+        raise HTTPException(status_code=502, detail=e.reason) from e
+    return {"reply": answer.reply, "grounded": answer.grounded}

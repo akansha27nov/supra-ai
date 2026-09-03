@@ -30,18 +30,15 @@ export interface AuditLog {
   Decision: string;
   Score: number;
   Flags: string;
-  // Structured counterpart to Flags: the full RuleViolation list (including
-  // nested SourceEvidence) parsed server-side from the ledger's FlagsDetail
-  // JSON column. Empty array for rows written before this column existed,
-  // or rows with no flags. Flags (the flat string) is kept as-is for
-  // anywhere that only needs the summary text.
   FlagsDetail?: RuleViolationDetail[];
   ReviewStatus?: string;
   Reviewer?: string;
-  // Joined in at read time from the gap-notice store (see server.py
-  // get_audit_ledger()). Empty string when no gap notice has been drafted
-  // for this record yet.
   GapNoticeStatus?: GapNoticeStatus | "";
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
 }
 
 export async function fetchAuditLogs(): Promise<AuditLog[]> {
@@ -210,6 +207,23 @@ export async function sendGapNotice(noticeId: string): Promise<{
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throw new Error(body.detail || `Failed to send gap notice: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export async function sendCopilotMessage(
+  recordId: string,
+  payload: { message: string; history: ChatMessage[] }
+): Promise<{ reply: string; grounded: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/logs/${recordId}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get copilot response: ${response.statusText}`);
   }
 
   return response.json();
