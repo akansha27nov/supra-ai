@@ -2,23 +2,31 @@
 
 ## 1. Executive Summary
 
-Supra AI is an AI-assisted supplier compliance screening platform for retailers and distributors of regulated products, initially focused on consumer electronics documentation.
+Supra AI is an AI-assisted supplier compliance screening system for a mid-sized European omnichannel consumer-electronics retailer.
 
-The platform:
+The documented business problem is that supplier compliance documentation—including CE declarations, RoHS evidence, certificates and laboratory test reports—is received through PDFs and other fragmented channels and requires significant manual review.
 
-1. Ingests supplier compliance documents such as CE declarations, RoHS certificates and test reports.
-2. Extracts structured information from PDFs using AI.
-3. Checks extracted information against deterministic compliance rules and the internal SKU catalogue.
-4. Prioritises incomplete, expired or inconsistent records.
-5. Provides evidence-linked findings for human review and approval.
+Supra AI addresses the screening portion of this workflow by:
 
-Supra AI is a screening and workflow-support tool, not an autonomous compliance decision-maker. Final compliance decisions remain with qualified human reviewers.
+1. Ingesting supplier compliance documents.
+2. Extracting structured information from documents using AI.
+3. Classifying documents such as manufacturer declarations and laboratory reports.
+4. Resolving supplier/manufacturer part numbers against the internal SKU catalogue.
+5. Applying deterministic compliance rules to the extracted information.
+6. Identifying missing, inconsistent, expired or potentially problematic information.
+7. Assigning a review priority and providing supporting evidence.
+8. Routing uncertain or flagged cases to a human reviewer.
+9. Supporting generation of supplier Gap Notices for failed documents.
 
-The recommended commercialisation path is:
+Supra AI is a **decision-support and workflow tool, not an autonomous compliance decision-maker**. The documented use case keeps final compliance responsibility with a qualified human reviewer.
 
-> **Proof of Concept → Controlled Pilot → Production Deployment → Optional Multi-tenant Scale**
+The recommended deployment path is:
 
-The first target customer is a mid-sized European omnichannel retailer with approximately 200 employees, 2,000 active SKUs and a mixed EU/non-EU supplier base.
+> **Working MVP → Controlled Customer Pilot → Production Use → Optional Commercial Expansion**
+
+The initial target remains a mid-sized European omnichannel retailer with approximately 200 employees, approximately 2,000 active SKUs, and EU/non-EU suppliers.
+
+The current repository demonstrates the technical feasibility of the core workflow and an expanded benchmark result of 13/13 audit decisions agreeing with labelled expectations, with 95.9% overall extraction accuracy. The benchmark should be treated as validation evidence rather than proof of production-scale reliability.
 
 ---
 
@@ -26,21 +34,28 @@ The first target customer is a mid-sized European omnichannel retailer with appr
 
 The deployment should achieve five objectives:
 
-- Reduce manual effort in supplier document review.
+- Reduce manual effort in supplier-document screening.
 - Improve visibility of missing, expired and inconsistent documentation.
-- Create a repeatable, auditable review process.
-- Reduce compliance risk without replacing human accountability.
-- Establish a commercially viable product that can expand beyond the initial customer.
+- Make compliance screening more consistent and auditable.
+- Preserve human accountability for final compliance decisions.
+- Establish whether the workflow provides measurable operational value.
 
-The initial product scope should remain deliberately narrow:
+The initial scope should remain deliberately narrow:
 
 - Consumer electronics.
-- PDF-based supplier documentation.
-- CE, RoHS and related declarations or test reports.
-- Human-in-the-loop review.
-- Integration with the client's SKU catalogue and document repository.
+- Supplier compliance PDFs.
+- CE/RoHS-related declarations, certificates and laboratory reports.
+- Structured extraction of agreed compliance fields.
+- Deterministic policy screening.
+- Supplier/manufacturer part-number to SKU resolution.
+- Evidence-linked findings.
+- Human review of uncertain and relevant flagged cases.
+- Supplier Gap Notice generation where applicable.
+- Lightweight reviewer interface and reporting.
 
-Additional product categories and regulatory regimes should be added only after the initial workflow has demonstrated reliable performance.
+The project should not attempt to become a complete supplier-management, legal-compliance or regulatory-submission platform.
+
+The documented use case explicitly positions Supra AI as an improvement to the middle of the existing supplier-document workflow rather than a replacement for the entire supplier-management lifecycle.
 
 ---
 
@@ -48,744 +63,580 @@ Additional product categories and regulatory regimes should be added only after 
 
 ### Human accountability
 
-Supra AI should recommend and prioritise actions, but it should not approve a product for sale or make an unreviewed legal compliance determination.
+Supra AI should assist reviewers rather than replace them.
+
+The system must not make legally binding compliance decisions, automatically approve products for sale, or use AI output as the sole basis for final compliance, supplier-approval or product-release decisions.
 
 ### Evidence-first outputs
 
-Every finding should link to:
+Findings should be traceable to the source document and the information extracted from it.
+
+Where evidence is available, reviewers should be able to inspect:
 
 - The source document.
-- The relevant page or text excerpt.
-- The extracted field.
-- The rule that produced the finding.
-- The reviewer decision and timestamp.
+- The relevant extracted field.
+- Supporting text or evidence.
+- The rule that generated the finding.
+- The resulting screening status.
+- The human review outcome.
 
 ### Deterministic policy layer
 
-AI should be used primarily for document understanding and field extraction. Compliance checks should remain transparent, testable and configurable through a rule engine.
+AI should primarily support document understanding, classification and extraction.
+
+Policy screening should remain deterministic, transparent and testable. The LLM must not independently invent the final compliance status.
+
+### Explicit uncertainty
+
+Where extraction or classification cannot be resolved confidently, the system should preserve an unresolved or ambiguous state and route the case for human review rather than manufacture certainty.
 
 ### Measured deployment
 
-Each phase should have explicit entry and exit criteria. Progression should depend on measured performance, reviewer feedback and operational readiness rather than the existence of a working demonstration alone.
+Progression between phases should depend on measured extraction quality, rule-screening performance, review-time impact, evidence quality and operational feedback.
 
 ### Narrow initial scope
 
-The first production release should support a limited document and product scope. Broad generalisation should be treated as a later commercial expansion objective.
+The initial deployment should focus on the documented consumer-electronics compliance workflow. Additional categories and regulatory regimes should be treated as future expansion rather than assumed MVP capability.
 
 ---
 
 # 4. Deployment Phases
 
-## Phase 1 — Proof of Concept
+## Phase 1 — Working MVP / Controlled Validation
 
 ### Purpose
 
-Demonstrate that Supra AI can process representative supplier documentation and produce useful, evidence-linked screening results for a defined set of products.
+Demonstrate that the documented end-to-end screening workflow operates reliably on representative supplier documentation.
 
 ### Scope
 
-- One business unit or product category.
-- 50–100 representative documents.
-- 25–50 SKUs.
-- CE and RoHS-related documentation.
-- Manual upload or controlled folder ingestion.
-- Existing dashboard and benchmark pipeline.
-- Human validation of every result.
+- Consumer-electronics compliance documentation.
+- CE/RoHS-related declarations and certificates.
+- Laboratory test reports.
+- Representative synthetic and real-world documents.
+- Internal SKU cross-reference data.
+- Deterministic compliance rules.
+- Human review.
+- Lightweight reviewer interface.
+- Benchmark and observability pipeline.
 
 ### Key activities
 
-- Confirm business requirements and compliance policy rules.
-- Map the client's SKU catalogue and required documentation.
-- Collect representative documents, including poor-quality and incomplete examples.
-- Configure extraction schemas and deterministic rules.
-- Establish a labelled validation set.
-- Run the pipeline against historical documents.
-- Record false positives, false negatives and extraction failures.
-- Define the target operating procedure for human reviewers.
-
-### Deliverables
-
-- Configured POC environment.
-- Initial SKU and rule catalogue.
-- Document ingestion process.
-- Extraction and audit results.
-- Reviewer feedback log.
-- Baseline accuracy and time-saving report.
-- Pilot business case.
-- Go/no-go decision for pilot.
+- Validate document classification.
+- Validate structured extraction against labelled ground truth.
+- Validate distinction between statutory chemical thresholds and measured laboratory results.
+- Validate supplier/manufacturer part-number to SKU matching.
+- Validate deterministic screening rules.
+- Validate uncertainty and human-review routing.
+- Validate evidence-linked findings.
+- Validate Gap Notice generation for flagged or rejected cases.
+- Measure extraction and rule-screening performance.
 
 ### Exit criteria
 
-The POC may proceed to pilot when:
+The MVP should be considered ready for controlled customer validation when:
 
-- At least 90% of in-scope documents are processed successfully.
-- At least 95% of mandatory fields are extracted correctly on the agreed validation set.
-- No critical compliance finding is silently missed in the validation set.
-- Every finding has an evidence reference.
-- Reviewers can understand and validate the output without technical assistance.
-- Data handling, access control and retention requirements are agreed.
-- The customer confirms that the pilot has a defined owner, dataset and success criteria.
+- The core workflow completes without unhandled failures on the agreed validation set.
+- Mandatory extraction fields meet the agreed accuracy threshold.
+- Unknown or ambiguous cases are not presented as confidently compliant.
+- Deterministic screening produces reproducible results.
+- Findings can be traced to supporting evidence.
+- Human reviewers can understand the result.
+- The expanded benchmark is retained as a regression baseline.
 
-The POC should not be considered proof of production readiness. The repository's current 12/12 agreement with labelled examples is a useful feasibility signal, but the sample is too small to establish production-scale reliability.
+The current repository provides a strong validation signal: the current benchmark reports 13/13 expected audit decisions and 95.9% overall extraction accuracy, including 100% for laboratory-test-report extraction and 93.5% for manufacturer self-declarations. However, `standards_tested` is currently 75%, so field-level performance is not uniformly above the 90% target. The benchmark therefore supports feasibility but does not establish production reliability.
 
 ---
 
-## Phase 2 — Controlled Pilot
+## Phase 2 — Controlled Customer Pilot
 
 ### Purpose
 
-Validate operational value, reliability and adoption using the customer's real workflow and a broader sample of supplier documentation.
+Validate operational usefulness and business value using the customer's real workflow and representative documentation.
 
-### Recommended duration
+### Recommended approach
 
-8–12 weeks.
-
-### Scope
+Run a controlled pilot with:
 
 - One customer.
-- One or two product categories.
-- 500–1,500 documents.
-- 200–500 SKUs.
-- 10–20 internal users or reviewers.
-- Historical and newly received documents.
-- Human review of all flagged records and a sample of unflagged records.
-- Controlled integration with the client's document repository or intake process.
+- One contained consumer-electronics category initially.
+- A representative document sample.
+- Relevant SKU catalogue data.
+- Compliance reviewers.
+- Historical and/or newly received documents where appropriate.
+- Human review throughout the pilot.
+
+The repository's Round-2 rollout plan describes an approximately eight-week implementation covering technical hardening, real laboratory-report validation, Gap Notice generation, reviewer UI work, calibration and rollout.
 
 ### Key activities
 
-- Import and normalise the agreed SKU catalogue.
-- Configure supplier, product and documentation metadata.
-- Create a document-quality and exception taxonomy.
-- Train reviewers on the workflow.
-- Run Supra AI in parallel with the existing process for an initial baseline period.
-- Compare processing time, finding quality and escalation rates.
-- Tune extraction prompts, schemas and rules.
-- Add confidence thresholds and mandatory human-review gates.
-- Establish incident, correction and model-change procedures.
-- Monitor cost per document and processing latency.
-- Conduct weekly pilot reviews with business stakeholders.
+- Establish the customer's manual-review baseline.
+- Collect representative documentation.
+- Structure the customer's SKU catalogue.
+- Validate supplier/manufacturer part-number mappings.
+- Configure applicable rules.
+- Measure extraction accuracy against labelled ground truth.
+- Compare AI-assisted and manual review time.
+- Record false positives, false negatives and unresolved cases.
+- Evaluate evidence quality.
+- Evaluate reviewer usability.
+- Measure the quality of generated Gap Notices.
+- Monitor actual processing cost.
+- Document operational issues and required controls.
 
 ### Pilot workstreams
 
-| Workstream | Pilot objective | Evidence of success |
+| Workstream | Objective | Evidence of success |
 |---|---|---|
-| Extraction | Capture supplier, product, standard and validity fields | Labelled-set precision and recall |
-| Rule screening | Identify missing, expired or inconsistent documentation | Correctly classified audit outcomes |
-| Workflow | Fit into procurement and compliance operations | Reviewer completion and adoption data |
-| Usability | Make findings understandable and actionable | Reviewer satisfaction and low clarification rate |
-| Controls | Preserve human accountability and auditability | Complete review history and evidence links |
-| Economics | Establish a credible unit-cost model | Measured cost per document and time saved |
+| Extraction | Extract agreed supplier, product, standards, date and chemical fields | Labelled-set accuracy |
+| Classification | Distinguish declarations from laboratory reports | Correct document classification |
+| SKU resolution | Connect supplier/manufacturer identifiers to internal SKUs | Correct matches and explicit unmatched cases |
+| Rule screening | Apply deterministic policy rules | Agreement with expert-labelled outcomes |
+| Human review | Enable reviewers to inspect uncertain/flagged cases | Reviewer validation and override data |
+| Gap Notice | Produce notices from actual findings | Correct supplier, failed rules and corrective action |
+| Observability | Record workflow execution and evaluation data | Traceable workflow runs |
+| Economics | Establish operational value | Measured time saved and cost per document |
 
 ### Pilot exit criteria
 
-A pilot may be recommended for full deployment when all critical criteria below are met:
+Production deployment should only be considered when the pilot demonstrates, against an agreed representative validation set:
 
-- **Document processing success:** at least 95% of in-scope documents complete without technical failure.
-- **Mandatory-field extraction:** at least 97% precision on critical fields, including supplier, product, declaration date, standards and document type.
-- **Critical miss rate:** zero unresolved silent misses for critical compliance conditions in the agreed test set.
-- **Audit classification:** at least 95% agreement with expert-labelled outcomes for in-scope rules.
-- **Human review performance:** at least 30% reduction in average review time compared with the baseline process.
-- **Finding usefulness:** at least 80% of flagged findings are judged actionable by reviewers.
-- **Evidence coverage:** 100% of findings include a source document and evidence location.
-- **Adoption:** at least 80% of assigned reviewers use the system during the final four weeks of the pilot.
-- **Operational availability:** at least 99% availability during agreed business hours, excluding planned maintenance.
-- **Security and governance:** customer-approved access, retention, incident response and change-control procedures.
-- **Business case:** measured benefits support the proposed production subscription and implementation cost.
-- **Owner commitment:** a named business owner accepts responsibility for policy configuration and final decisions.
+- High document-processing reliability.
+- Critical-field extraction performance meeting the agreed target.
+- No unresolved silent critical misses.
+- Strong agreement between deterministic screening and expert-labelled outcomes.
+- Measurable reduction in review time.
+- Evidence coverage for findings.
+- Reviewers can understand and validate findings.
+- Human-review responsibilities are clearly defined.
+- Security, retention and access requirements have been agreed.
+- The measured business case supports continued deployment.
 
-A single critical compliance miss, unresolved access-control issue or inability to explain findings should block full deployment until remediated.
+The pilot should not be considered successful solely because extraction accuracy is high. The business case depends primarily on whether reviewer effort is actually reduced while evidence quality and human oversight are preserved.
 
 ---
 
-## Phase 3 — Full Production Deployment
+## Phase 3 — Production Use
 
 ### Purpose
 
-Make Supra AI part of the customer's standard supplier-documentation and product-onboarding process.
+Make the validated screening workflow part of the customer's normal supplier-document review process.
 
-### Scope
+### Initial production scope
 
-- All agreed consumer-electronics suppliers.
-- Full in-scope SKU catalogue.
-- New document intake and historical backlog.
-- Role-based access for procurement, compliance and operations.
-- Production monitoring and support.
-- Formal service-level agreement.
-- Integration with document storage and, where appropriate, procurement or product-information systems.
+Production should initially remain within the validated consumer-electronics workflow and agreed document types.
 
-### Key activities
+The production environment should support:
 
-- Migrate from pilot configuration to production infrastructure.
-- Finalise integration with document repositories and intake channels.
-- Establish production rule ownership and approval workflow.
-- Backfill the agreed historical document set.
-- Introduce supplier-facing remediation workflows.
-- Create monthly performance and risk reporting.
-- Schedule periodic rule, prompt and benchmark reviews.
-- Add automated alerts for expiring or missing documentation.
-- Implement disaster recovery and operational runbooks.
-- Conduct quarterly business reviews.
+- Agreed supplier-document intake.
+- Structured extraction.
+- Document classification.
+- SKU resolution.
+- Deterministic screening.
+- Evidence-linked findings.
+- Human review.
+- Gap Notice generation where applicable.
+- Audit/history records.
+- Monitoring and regression evaluation.
 
 ### Production operating model
 
-- **Procurement:** requests and follows up supplier documentation.
-- **Compliance:** owns rules, reviews exceptions and approves final outcomes.
-- **Supply-chain operations:** monitors supplier and product readiness.
-- **IT or data team:** owns integrations, access and technical support.
-- **Supra AI provider:** maintains the platform, extraction pipeline, monitoring and agreed configuration.
-- **Business owner:** approves scope changes, risk tolerance and expansion decisions.
+- **Procurement:** follows up suppliers and manages documentation requests.
+- **Compliance:** owns policy rules, reviews exceptions and retains responsibility for final compliance decisions.
+- **Product/inventory stakeholders:** support product and SKU identification.
+- **IT/data stakeholders:** manage approved integrations, access and technical support.
+- **Supra AI delivery team:** maintains the screening workflow, extraction configuration and agreed technical components.
+- **Business owner:** owns scope, risk tolerance and deployment decisions.
 
-### Production success criteria
+### Production success measures
 
-After the first 90 days, the deployment should demonstrate:
+After an agreed initial production period, assess:
 
-- Sustained processing success of at least 98%.
-- Stable or improving critical-field precision.
-- At least 30–50% reduction in manual review time.
-- Reduced backlog of incomplete or expired documentation.
-- Consistent reviewer adoption.
-- No material increase in unresolved compliance exceptions.
-- Positive value contribution after subscription and operating costs.
-- Documented evidence that reviewers act on prioritised findings.
+- Processing reliability.
+- Critical-field extraction performance.
+- Critical miss rate.
+- Review-time reduction.
+- Reviewer adoption.
+- Actionability of findings.
+- Evidence completeness.
+- Backlog of incomplete or expired documentation.
+- Processing cost.
+- Human override/correction rates.
+- Supplier-document remediation outcomes.
+
+Production expansion should depend on measured performance rather than assumed reliability.
 
 ---
 
-## Phase 4 — Optional Scale
+## Phase 4 — Optional Commercial Expansion
 
-Scale should begin only after the initial production deployment is stable for at least one quarter.
+Expansion should occur only after the initial consumer-electronics workflow has demonstrated reliable performance and measurable value.
 
-### Potential expansion paths
+### Potential expansion areas
 
-1. **More product categories**
-   - Household appliances.
-   - Toys.
-   - Batteries.
-   - Personal protective equipment.
-   - Other regulated consumer goods.
+The repository's broader commercialisation strategy can be explored after the initial use case is validated.
 
-2. **More regulatory regimes**
-   - Additional EU product requirements.
-   - Country-specific documentation.
-   - Customer-specific supplier policies.
-   - Environmental and sustainability documentation.
+Potential areas include:
 
-3. **More workflow integrations**
-   - ERP systems.
-   - Product information management systems.
-   - Supplier relationship management platforms.
-   - Procurement suites.
-   - Shared document repositories.
+1. **Additional product categories**
+   - Other documentation-heavy regulated consumer products.
 
-4. **Supplier self-service**
-   - Supplier upload portal.
-   - Automated gap notices.
-   - Document replacement requests.
-   - Supplier compliance status views.
+2. **Additional regulatory requirements**
+   - Additional requirements relevant to the customer's product portfolio.
 
-5. **Portfolio analytics**
-   - Supplier risk trends.
-   - Category-level exposure.
-   - Upcoming expiry workload.
-   - Compliance readiness before product launch.
+3. **Additional workflow integrations**
+   - Document repositories.
+   - Procurement systems.
+   - Product-information systems.
+   - Other customer systems where integration provides demonstrated value.
+
+4. **Supplier-facing workflows**
+   - Supplier upload and remediation workflows.
+   - Gap-notice communication.
+
+5. **Portfolio reporting**
+   - Supplier-level trends.
+   - Product/category compliance workload.
+   - Expiry workload.
+   - Compliance-readiness reporting.
+
+These are **commercial expansion opportunities, not current MVP capabilities**.
 
 ### Scale gate
 
-Scale is approved when:
+Expansion should be considered only when:
 
-- The initial customer has achieved target KPIs for at least three consecutive months.
-- The rule and configuration model can support a second customer without extensive custom code.
-- Onboarding effort is documented and repeatable.
-- Unit economics improve or remain acceptable at higher volumes.
-- Monitoring can identify degradation by customer, product category and document type.
-- The commercial team has a repeatable sales and implementation process.
+- The initial workflow has met its agreed KPIs for a sustained period.
+- Real-world document performance is understood.
+- The rule/configuration model can be reused without extensive customer-specific redevelopment.
+- Onboarding effort is documented.
+- Operating costs are understood.
+- Monitoring can identify material degradation.
+- The commercial proposition is supported by measured customer value.
 
 ---
 
 # 5. Timeline and Milestones
 
-The following plan assumes a 20-week path from POC to production, followed by an optional scale phase.
+The repository's current Round-2 planning is based on an approximately eight-week path from technical hardening through pilot and rollout.
 
 | Period | Phase | Major activities | Milestone |
 |---|---|---|---|
-| Weeks 1–2 | POC preparation | Confirm scope, rules, users, data access and success criteria | Signed POC charter |
-| Weeks 3–4 | POC build | Configure ingestion, schemas, SKU mapping and deterministic rules | First end-to-end customer dataset processed |
-| Weeks 5–6 | POC validation | Label results, assess errors, collect reviewer feedback | POC accuracy and value report |
-| Week 7 | POC decision | Resolve critical issues and approve pilot design | Pilot go/no-go |
-| Weeks 8–9 | Pilot setup | Integrations, access controls, training, baseline measurement | Pilot environment ready |
-| Weeks 10–13 | Pilot operation | Process live or historical documents in parallel with existing workflow | Mid-pilot performance review |
-| Weeks 14–16 | Pilot optimisation | Tune rules, thresholds, prompts and workflow | Final pilot dataset completed |
-| Weeks 17–18 | Pilot evaluation | Measure KPIs, economics, adoption and operational risks | Full-deployment recommendation |
-| Weeks 19–20 | Production launch | Production migration, support model and reporting | Production go-live |
-| Months 6–9 | Stabilisation | Monitor performance, improve onboarding and expand usage | Three-month production review |
-| Months 9–12 | Optional scale | Add categories, suppliers, integrations or customers | Scale investment decision |
+| Weeks 1–2 | Core hardening | LangGraph extraction, classification, uncertainty handling and regression testing | Hardened core workflow |
+| Weeks 3–4 | Real-world validation | Real laboratory reports, ground truth and rule validation | Expanded validation set |
+| Weeks 5–6 | Reviewer workflow | Gap Notice generation, reviewer UI and calibration | Usable review workflow |
+| Weeks 7–8 | Rollout and validation | Broader pilot/rollout, dashboard and final benchmark | Deployment recommendation |
+
+The repository's timeline explicitly notes that full-catalog rollout means processing new/renewed documentation going forward; it does not imply that the historical documentation for all approximately 2,000 SKUs is automatically re-screened within the eight-week period.
+
+Any broader production programme should therefore be re-estimated using actual customer integration, backlog and governance requirements.
 
 ---
 
 # 6. Go-to-Market Strategy
 
-## Target buyers
+## Target customer
 
-### Primary buyer
+The strongest initial target is the documented customer profile:
 
-**Head of Procurement or Supply Chain Operations**
+- Mid-sized European retailer.
+- Omnichannel operation.
+- Consumer-electronics catalogue.
+- Approximately 200 employees.
+- Approximately 2,000 active SKUs.
+- EU and non-EU suppliers.
+- Manual/document-heavy compliance workflow.
+- Supplier documentation distributed across PDFs, spreadsheets, email and repositories.
 
-This buyer experiences the operational burden of chasing supplier documents, onboarding products and managing incomplete records. Their primary goals are speed, visibility and reduced manual work.
+## Primary user
 
-### Economic buyer
+The primary MVP user is the **compliance professional**.
 
-**Chief Operating Officer, Chief Procurement Officer or Finance Director**
+Secondary stakeholders include:
 
-This buyer cares about:
-
-- Reduced operational cost.
-- Faster product onboarding.
-- Lower risk of selling products with incomplete documentation.
-- Scalable compliance operations without proportional headcount growth.
-
-### Key influencers
-
-- Head of Compliance or Product Safety.
-- Quality assurance manager.
-- Legal and regulatory affairs team.
-- IT and data-protection team.
-- Product or merchandising leadership.
-- Supplier-management team.
-
-### Initial customer profile
-
-The strongest early-adopter profile is:
-
-- European retailer, distributor or marketplace.
-- 100–1,000 employees.
-- Hundreds to tens of thousands of active SKUs.
-- Consumer electronics or other documentation-heavy products.
-- Suppliers across multiple countries.
-- Existing compliance review performed primarily through email, spreadsheets and PDFs.
-- Clear human review process but limited automation.
-- Sufficient document volume to create measurable operational value.
+- Head of Procurement.
+- Procurement team.
+- Product/inventory managers.
+- IT/data team.
+- Management.
+- Suppliers.
+- Legal/data-protection stakeholders.
 
 ## Buyer pain points
 
-- Supplier documentation is distributed across email, shared drives and spreadsheets.
-- Reviewers spend time locating and comparing documents rather than resolving exceptions.
-- Expiry dates and missing documents are difficult to track.
-- Product and supplier records may not match consistently.
-- Management lacks a current view of compliance workload and exposure.
-- Compliance teams are reluctant to use opaque AI that makes unsupported decisions.
+The documented use case identifies:
+
+- Manual extraction from unstructured supplier documents.
+- Difficulty identifying missing, expired or inconsistent documentation.
+- Fragmented information across suppliers, products and systems.
+- Difficulty standardising manual checks as the catalogue grows.
+- Need for explainable and auditable compliance screening.
 
 ## Positioning
 
-> **Supra AI turns fragmented supplier compliance documents into an auditable review queue—using AI to extract evidence, rules to screen requirements and humans to make the final decision.**
+> **Supra AI helps compliance teams turn unstructured supplier documents into structured, evidence-backed compliance insights—reducing manual screening effort while keeping final decisions with humans.**
 
 ## Differentiators
 
-1. **Human-in-the-loop by design**  
-   Supra AI supports reviewers rather than replacing accountable compliance decisions.
+1. **Human-in-the-loop by design**
+   - Supports compliance professionals rather than replacing them.
 
-2. **AI extraction plus deterministic rules**  
-   The separation between document extraction and policy evaluation makes the output easier to test, explain and govern.
+2. **AI extraction plus deterministic screening**
+   - Separates document understanding from policy evaluation.
 
-3. **Evidence-linked findings**  
-   Reviewers can trace findings back to the source document and relevant text.
+3. **Evidence-backed findings**
+   - Allows reviewers to trace findings to source information.
 
-4. **SKU-aware screening**  
-   Results are checked against product-specific requirements rather than generic document presence alone.
+4. **SKU-aware screening**
+   - Connects supplier/manufacturer identifiers to the internal product catalogue.
 
-5. **Prioritised exceptions**  
-   The product focuses attention on missing, expired and inconsistent documentation.
+5. **Prioritised review**
+   - Highlights missing, inconsistent and potentially problematic documentation.
 
-6. **Fast initial deployment**  
-   The first version can operate using PDFs, a SKU catalogue and a controlled workflow without requiring a major systems replacement.
+6. **Observable workflow**
+   - Supports evaluation and monitoring of the AI-assisted process.
 
-7. **Measurable operational value**  
-   Success can be measured through review time, backlog reduction, finding quality and cost per document.
-
-## Channels
-
-### Direct enterprise sales
-
-Best for the first three to five customers.
-
-- Founder-led or specialist consultative sales.
-- Targeted outreach to procurement, compliance and supply-chain leaders.
-- Demonstrations using anonymised sample documents.
-- Paid discovery or POC before a longer subscription commitment.
-
-### Compliance and procurement consultancies
-
-Consultancies can introduce Supra AI as part of:
-
-- Supplier onboarding programmes.
-- Product compliance audits.
-- Documentation remediation projects.
-- Procurement transformation programmes.
-
-This channel can accelerate trust but may require partner margins and implementation enablement.
-
-### Technology partnerships
-
-Potential partners include:
-
-- Document-management platforms.
-- Procurement software providers.
-- Product-information management vendors.
-- ERP implementation partners.
-- Specialist product compliance platforms.
-
-The initial approach should favour integration partnerships rather than attempting to replace established systems.
-
-### Industry events and content
-
-Relevant content themes include:
-
-- Managing supplier compliance at scale.
-- Human oversight for AI-assisted compliance.
-- Reducing documentation review backlogs.
-- Building auditable AI workflows for procurement.
-- Practical lessons from poor-quality supplier PDFs.
-
-Content should focus on operational outcomes rather than generic AI capability.
+The product should not be positioned as providing legal advice or guaranteeing regulatory compliance.
 
 ---
 
 # 7. Pricing and Packaging
 
-Pricing should combine implementation revenue with recurring platform revenue.
+Pricing should be treated as a **commercial hypothesis to validate**, not as an established product price.
 
-## Recommended packages
+The repository's cost analysis supports the following economic observations:
 
-| Package | Target customer | Indicative pricing | Included |
-|---|---|---:|---|
-| Discovery / POC | New customer validating the use case | €5,000–€10,000 one-off | Scope definition, data assessment, configured workflow, validation report |
-| Pilot | One business unit or category | €15,000–€30,000 for 8–12 weeks | Configuration, controlled processing, training, KPI reporting and optimisation |
-| Production — Core | Mid-sized retailer or distributor | €30,000–€60,000 annual subscription | Platform access, agreed document volume, dashboard, rule configuration and support |
-| Production — Growth | Larger catalogue or multiple categories | €60,000–€120,000 annual subscription | Higher volume, integrations, advanced reporting and priority support |
-| Enterprise | Large or multi-country organisation | Custom | Multiple business units, higher service levels, private deployment options and supplier workflows |
+- Approximately 150 documents/month is a planning assumption.
+- AI inference cost measured in the current evaluation is approximately $0.0004/document.
+- Estimated pilot-build cost is approximately €3,300–€5,000.
+- Ongoing tooling costs are expected to be low relative to human review cost.
+- Human review time remains the principal value/cost driver.
 
-The pricing ranges are starting points for commercial testing. Final prices should be based on document volume, number of SKUs, integration complexity, support requirements and the value demonstrated during the pilot.
+The commercial proposition should therefore be based primarily on measurable customer outcomes rather than AI token cost.
 
-## Pricing structure
+### Proposed commercial structure
 
-A practical production contract should contain:
+A potential B2B model could combine:
 
-- Annual platform subscription.
-- Included document-processing allowance.
-- Additional usage fee above the allowance.
-- One-off implementation and integration fee.
-- Optional premium support.
-- Optional rules and category expansion fee.
+- Paid discovery/POC.
+- Paid pilot and configuration.
+- Recurring production subscription.
+- Additional implementation/integration services where justified.
 
-### Usage metric
+Exact pricing should be established after the pilot measures:
 
-The simplest initial usage metric is the number of documents processed. However, pricing should avoid encouraging customers to upload duplicate or irrelevant files. The contract should define:
+- Documents processed.
+- Review time.
+- Time saved.
+- Finding quality.
+- Integration effort.
+- Actual operating costs.
+- Customer willingness to pay.
 
-- What counts as a processed document.
-- Whether reprocessing counts.
-- Treatment of duplicate documents.
-- OCR or unusually complex document surcharges.
-- Maximum file size and supported formats.
-
-## Commercial value proposition
-
-The financial case should be based on measured customer results, including:
-
-- Review hours avoided.
-- Reduced backlog.
-- Faster supplier or product onboarding.
-- Earlier identification of expired documents.
-- Reduced manual data entry.
-- Improved management visibility.
-- Fewer avoidable escalations.
-
-A customer should be able to justify the subscription through operational savings and risk reduction without relying on an unsupported claim that the platform guarantees legal compliance.
+The project should not claim a guaranteed ROI percentage before those customer measurements exist.
 
 ---
 
 # 8. Commercialisation Model
 
-## Recommended model: B2B SaaS with implementation services
+## Recommended model
 
-Supra AI should be commercialised as a software-as-a-service platform supported by paid configuration and integration services.
+**B2B software with implementation and configuration services**, subject to validation through the first customer pilot.
 
-### Revenue streams
+### Initial commercial progression
 
-1. **Discovery and POC fees**
-   - Paid assessment of data, rules and workflow.
-   - Reduces unpaid presales work.
-   - Creates a clear transition point to a pilot.
+1. Validate the problem and workflow.
+2. Conduct a controlled paid pilot.
+3. Measure operational value.
+4. Convert the validated workflow into a production subscription.
+5. Expand only where additional categories, integrations or workflows demonstrate customer value.
 
-2. **Pilot fees**
-   - Covers configuration, training, measurement and customer support.
-   - Converts the use case into a quantified business case.
+### Standard onboarding activities
 
-3. **Annual subscription**
-   - Core recurring revenue.
-   - Based on customer size, document volume, users and modules.
-
-4. **Implementation fees**
-   - SKU catalogue mapping.
-   - Repository or API integration.
-   - Rule configuration.
-   - Historical backfill.
-   - User training.
-
-5. **Expansion revenue**
-   - Additional product categories.
-   - Additional regulatory rule sets.
-   - Supplier portal.
-   - Advanced analytics.
-   - Higher processing volume.
-   - Multi-country deployment.
-
-6. **Partner revenue**
-   - Referral or reseller arrangements with consultancies and technology partners.
-
-## Contract structure
-
-The initial production contract should be an annual agreement with:
-
-- Defined scope and supported document types.
-- Included volume.
-- Service levels.
-- Support hours and response targets.
-- Customer responsibilities.
-- Human-review responsibilities.
-- Data-processing and retention terms.
-- Change-control process for rules and workflows.
-- Exit and data-export provisions.
-- Renewal and expansion terms.
-
-## Implementation model
-
-### Standard onboarding
+A repeatable onboarding process should cover:
 
 1. Business and compliance discovery.
-2. Data and document assessment.
+2. Document and data assessment.
 3. SKU catalogue mapping.
 4. Rule configuration.
-5. User and access setup.
-6. Historical data import.
-7. Validation against labelled examples.
-8. User training.
-9. Controlled launch.
-10. Production handover.
+5. Validation against labelled examples.
+6. User setup/training where required.
+7. Controlled launch.
+8. Production handover.
 
-The goal should be to reduce standard onboarding to 4–8 weeks after the product has completed its first few deployments.
-
-## Build-versus-configure strategy
-
-The product should use configuration wherever possible:
-
-- Configurable document schemas.
-- Configurable product and supplier fields.
-- Versioned rules.
-- Customer-specific thresholds.
-- Reusable review states.
-- Standard API and file-based connectors.
-
-Custom code should be reserved for integrations and requirements that are likely to be reusable across multiple customers.
+Configuration should be preferred over customer-specific redevelopment wherever practical.
 
 ---
 
 # 9. Stakeholder Communication Plan
 
-## Stakeholder matrix
+| Stakeholder | Information need | Suggested cadence |
+|---|---|---|
+| Executive sponsor | Business value, risks and milestones | Phase gates / periodic review |
+| Procurement leadership | Documentation workload and supplier follow-up | Weekly during pilot |
+| Compliance reviewers | Findings, evidence, exceptions and rule behaviour | Weekly during pilot / ongoing |
+| Product/inventory stakeholders | SKU matching and product readiness | Weekly during pilot |
+| IT/data stakeholders | Access, integration and operational issues | At setup and on material changes |
+| Legal/data protection | Data handling and accountability | Phase gates / material changes |
+| Suppliers | Missing documents and corrective actions | When remediation is required |
+| Delivery team | Defects, performance and configuration | Regular delivery review |
 
-| Stakeholder | Information need | Frequency | Channel | Owner |
-|---|---|---|---|---|
-| Executive sponsor | Business value, risk, budget and milestones | Fortnightly during pilot; monthly in production | Steering meeting and summary report | Project lead |
-| Procurement leadership | Backlog, supplier response and workflow performance | Weekly during pilot; monthly in production | Dashboard and review meeting | Procurement owner |
-| Compliance reviewers | Findings, evidence quality, exceptions and rule changes | Weekly during pilot; ongoing in production | In-product queue, training and office hours | Compliance lead |
-| Supply-chain operations | Product readiness, supplier delays and escalations | Weekly | Dashboard and exception report | Operations lead |
-| IT / data protection | Access, integrations, incidents and data handling | At setup, then monthly or on change | Technical review and ticketing | Technical lead |
-| Legal / regulatory | Scope, control design and decision accountability | At phase gates and major rule changes | Control review | Compliance lead |
-| Suppliers | Document requests, missing information and remediation status | As triggered by workflow | Email or supplier portal | Procurement team |
-| Supra AI delivery team | Defects, model performance, cost and roadmap | Daily internally; weekly with customer | Delivery stand-up and issue log | Product owner |
+### Pilot reporting
 
-## Communication cadence
-
-### Weekly pilot report
-
-The weekly report should include:
+Pilot reporting should track:
 
 - Documents received and processed.
 - Processing failures.
-- Findings by severity and type.
+- Findings by severity/type.
 - Critical exceptions.
-- Average review time.
+- Review time.
 - Reviewer adoption.
-- Supplier response status.
-- Open defects and corrective actions.
-- KPI trend against target.
+- Correction/override rate.
+- Supplier remediation status.
+- KPI performance.
+- Open defects.
 
-### Phase-gate report
+### Escalation
 
-Each gate report should contain:
+Escalate material issues when:
 
-- Scope completed.
-- Results against agreed KPIs.
-- Known limitations.
-- Material incidents.
-- Customer feedback.
-- Commercial value estimate.
-- Risks and mitigations.
-- Recommendation: proceed, extend, remediate or stop.
-
-### Production monthly report
-
-The monthly report should include:
-
-- Volume and throughput.
-- Review-time savings.
-- Critical findings and ageing.
-- Expiring documents.
-- False-positive and correction trends.
-- Availability and processing latency.
-- Cost per document.
-- User adoption.
-- Rule or configuration changes.
-- Recommended improvements.
-
-## Escalation rules
-
-Escalate immediately to the compliance lead and executive sponsor when:
-
-- A critical document is incorrectly classified as complete.
+- A critical finding is missed.
 - A finding cannot be traced to evidence.
-- The system processes a document against the wrong SKU or supplier.
-- Access to customer data is incorrect or unauthorised.
-- A rule change produces unexpected portfolio-wide results.
-- Processing failures create a material review backlog.
-- A production change affects extraction or rule outcomes without approval.
+- A document is associated with the wrong product/SKU.
+- Data access is incorrect or unauthorised.
+- A rule change produces unexpected results.
+- Processing failures create a material backlog.
+- A material workflow change occurs without appropriate review.
 
 ---
 
 # 10. KPIs and Measurement Framework
 
-## KPI definitions
+The KPIs should distinguish **technical performance**, **workflow value** and **business value**.
 
-### Technical KPIs
+## Technical KPIs
 
-| KPI | Definition | POC target | Pilot target | Production target |
-|---|---|---:|---:|---:|
-| Processing success rate | Documents completing without technical failure | ≥90% | ≥95% | ≥98% |
-| Critical-field precision | Correct extracted values divided by extracted values for critical fields | ≥95% | ≥97% | ≥98% |
-| Critical-field recall | Correctly extracted required values divided by required values present | ≥90% | ≥95% | ≥97% |
-| Critical miss rate | Critical compliance issues not surfaced by the system | 0 in test set | 0 in agreed validation set | 0 material incidents |
-| Evidence coverage | Findings with source and evidence reference | 100% | 100% | 100% |
-| Median processing latency | Time from submission to result | Baseline | Defined SLA | Within SLA |
-| Availability | Service availability during agreed hours | N/A | ≥99% | ≥99.5% |
+| KPI | Definition | Target / measurement |
+|---|---|---|
+| Extraction accuracy | Correct extracted values against labelled ground truth | Agreed field-level target |
+| Document classification accuracy | Correct declaration/lab-report classification | Measured against labelled examples |
+| Rule-screening agreement | Agreement with expert-labelled outcomes | Agreed pilot threshold |
+| Critical miss rate | Critical issues not surfaced | Zero unresolved critical misses in agreed validation set |
+| Evidence coverage | Findings with supporting evidence | 100% target |
+| Processing success | Documents completing without technical failure | Measured during pilot |
+| Observability | Workflow execution available for evaluation | Required for material production changes |
 
-### Operational KPIs
+## Operational KPIs
 
-| KPI | Definition | POC target | Pilot target | Production target |
-|---|---|---:|---:|---:|
-| Review-time reduction | Reduction against baseline manual review | Directional | ≥30% | ≥30–50% |
-| Reviewer adoption | Assigned reviewers actively using the system | ≥60% | ≥80% | ≥85% |
-| Actionable finding rate | Findings accepted as useful by reviewers | ≥70% | ≥80% | ≥85% |
-| Backlog reduction | Reduction in overdue or unreviewed documents | Baseline established | ≥20% | Sustained reduction |
-| First-pass resolution | Issues resolved without repeated manual rework | Baseline established | Improvement demonstrated | Quarterly improvement |
-| Supplier response time | Time from request to acceptable replacement document | Baseline established | Improvement demonstrated | Measured by segment |
+| KPI | Definition | Target / measurement |
+|---|---|---|
+| Review-time reduction | Assisted review time versus manual baseline | Measure during pilot |
+| Reviewer adoption | Target users actively using workflow | Measure during pilot |
+| Actionable finding rate | Findings reviewers consider useful/actionable | Measure during pilot |
+| Backlog reduction | Reduction in overdue/unreviewed documentation | Measure against baseline |
+| Human override rate | Frequency of reviewer disagreement/correction | Measure and investigate |
+| Supplier response time | Time to receive acceptable replacement documentation | Measure where workflow supports it |
 
-### Business KPIs
+## Business KPIs
 
-| KPI | Definition | Pilot target | Production target |
-|---|---|---:|---:|
-| Cost per processed document | Platform and variable processing cost divided by documents processed | Measured | Within contract margin target |
-| Cost per reviewed exception | Total workflow cost divided by resolved exceptions | Baseline and improvement | Year-on-year reduction |
-| Product onboarding time | Time from document submission to review-ready status | Improvement demonstrated | ≥20% reduction |
-| Avoided manual hours | Baseline hours less assisted-process hours | Measured | Positive ROI |
-| Subscription value coverage | Quantified annual benefit divided by annual subscription cost | ≥1.5x directional | ≥2x target |
-| Expansion readiness | Number of additional categories or workflows suitable for rollout | At least one | Defined expansion pipeline |
+| KPI | Definition | Target / measurement |
+|---|---|---|
+| Avoided manual hours | Manual baseline minus assisted-process hours | Measure during pilot |
+| Cost per document | Actual operating cost / documents processed | Measure during pilot |
+| Product onboarding time | Time from document submission to review-ready status | Measure improvement |
+| Subscription value coverage | Quantified benefit / subscription cost | Validate commercially |
+| Business ROI | Net quantified benefit / total cost | Calculate from pilot data |
 
-## Greenlight decision: Pilot to full deployment
+### Deployment decision
 
-Full deployment should be greenlit only when:
+Production should be considered only when:
 
-1. Critical-field precision is at least 97% on a representative labelled pilot dataset.
-2. No critical compliance issue is silently missed in the agreed validation set.
-3. Processing success is at least 95%.
-4. Review time is reduced by at least 30%.
-5. At least 80% of target reviewers actively use the system.
-6. At least 80% of flagged findings are considered actionable.
-7. All findings contain evidence links.
-8. Access, retention, support and incident processes are approved.
-9. The customer has a named compliance owner.
-10. The measured or defensible business case supports production pricing.
-
-If technical KPIs pass but adoption or business-value KPIs fail, the deployment should be extended or redesigned rather than automatically moved to production.
+1. Technical performance meets the agreed validation thresholds.
+2. Critical compliance misses are controlled.
+3. Reviewers can understand and validate findings.
+4. Evidence is available for findings.
+5. Review-time reduction is demonstrated.
+6. Human accountability remains intact.
+7. Operational and data-handling requirements are acceptable.
+8. The measured business case supports continued deployment.
 
 ---
 
 # 11. Governance, Risk and Controls
 
-## Key risks and mitigations
-
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Incorrect extraction from poor-quality PDFs | Wrong screening result | Confidence thresholds, OCR fallback, human review and representative test data |
-| False negative on a critical requirement | Compliance exposure | Critical-field validation, mandatory review gates and labelled regression tests |
-| False positives overwhelm reviewers | Low adoption | Prioritisation, rule tuning and tracking of actionable finding rate |
-| SKU-document mismatch | Incorrect product assessment | Product and supplier identifiers, manual confirmation for ambiguous matches |
-| Regulatory rules change | Outdated screening | Versioned rule catalogue, named rule owner and scheduled reviews |
-| Supplier documents are incomplete or misleading | Low-quality inputs | Supplier remediation workflow and evidence-preserving audit trail |
-| Overreliance on synthetic data | Inflated performance results | Expand real-world labelled datasets before production |
-| Integration failure | Workflow disruption | File-based fallback, monitoring and staged integration |
-| Uncontrolled model or prompt change | Performance regression | Versioning, benchmark tests and change approval |
-| Customer perceives the system as legal advice | Misuse | Clear product scope, human approval and contractual responsibility boundaries |
+| Incorrect extraction | Wrong screening result | Ground-truth evaluation, regression testing, evidence review and human escalation |
+| Unknown/ambiguous document classification | Incorrect validation path | Explicit unresolved state and human review |
+| False negative on critical requirement | Compliance exposure | Deterministic rules, critical-field validation and human review |
+| False positives | Reviewer burden and reduced adoption | Rule calibration and actionable-finding measurement |
+| SKU-document mismatch | Incorrect product assessment | SKU cross-reference and explicit unmatched/ambiguous handling |
+| Regulatory rules change | Outdated screening | Versioned rule catalogue and named rule ownership |
+| Poor-quality source documents | Extraction degradation | Validation of document quality and human escalation |
+| Overreliance on benchmark data | Inflated performance expectations | Expand and maintain representative real-world ground truth |
+| Model/prompt change | Performance regression | Versioning and benchmark/regression testing |
+| AI treated as final authority | Governance/compliance risk | Clear decision boundaries and human final review |
 
-## Required controls
+### Required production controls
 
-- Role-based access control.
-- Authentication and least-privilege permissions.
-- Audit logs for uploads, findings, edits and approvals.
-- Versioned extraction schemas and rules.
-- Regression benchmark for every material change.
-- Confidence thresholds for automatic routing.
-- Mandatory human review for critical or ambiguous findings.
-- Data-retention and deletion configuration.
-- Incident-response process.
-- Exportable customer records.
-- Monitoring for processing failures and abnormal output patterns.
+Before a production deployment, the customer and delivery team should agree appropriate controls for:
+
+- Access and authentication.
+- Data retention/deletion.
+- Audit history.
+- Rule and extraction-schema versioning.
+- Regression evaluation.
+- Human-review responsibilities.
+- Incident handling.
+- Customer data export.
+- Monitoring of processing failures and material output changes.
+
+These are **deployment requirements to establish**, not claims that all controls are already implemented in the current MVP.
 
 ---
 
 # 12. Product Roadmap Supporting Commercialisation
 
-## Release 1 — Pilot-ready
+## Current / Pilot-ready capability
 
-- Reliable PDF ingestion.
-- Structured extraction schema.
-- CE/RoHS rule set.
-- SKU catalogue mapping.
+The current project scope focuses on:
+
+- PDF supplier-document ingestion.
+- Structured extraction.
+- Document classification.
+- CE/RoHS-related screening.
+- SKU resolution.
+- Deterministic rules.
 - Evidence-linked findings.
-- Reviewer dashboard.
-- Manual correction workflow.
-- Basic monitoring and audit logs.
-- Benchmark and regression test suite.
+- Human review.
+- Gap Notice generation.
+- Reviewer interface.
+- Benchmarking and observability.
 
-## Release 2 — Production-ready
+## Production hardening
 
-- Role-based access.
-- Document repository integration.
-- Expiry alerts.
-- Supplier and product history.
-- Configurable rules.
-- Review queues by severity and owner.
-- Production support tooling.
-- Usage and cost reporting.
-- Data export and retention controls.
+Production work should prioritise only requirements demonstrated to be necessary through the pilot, including:
 
-## Release 3 — Scale-ready
+- Reliable customer document intake.
+- Appropriate access controls.
+- Customer data handling.
+- Stable rule/configuration management.
+- Review history.
+- Operational monitoring.
+- Data export and retention processes.
 
-- Multi-tenant architecture.
-- Supplier portal.
-- Self-service configuration.
-- Additional categories and regulations.
-- API integrations.
-- Advanced analytics.
-- Customer-level model and rule performance monitoring.
-- Partner implementation toolkit.
+## Future commercial expansion
+
+Only after the initial workflow is validated should the product consider:
+
+- Additional product categories.
+- Additional regulatory requirements.
+- Additional system integrations.
+- Supplier-facing workflows.
+- Broader portfolio analytics.
+- Multi-customer or multi-tenant deployment.
+
+These should not be presented as current MVP capabilities.
 
 ---
 
@@ -793,83 +644,91 @@ If technical KPIs pass but adoption or business-value KPIs fail, the deployment 
 
 | Decision | Accountable owner | Required input |
 |---|---|---|
-| Product and regulatory scope | Customer compliance lead | Procurement and legal |
-| Rule approval | Customer compliance lead | Supra AI product team |
-| Production go-live | Executive sponsor | Compliance, IT and project lead |
-| Model or prompt changes | Supra AI product owner | Benchmark and compliance review |
-| Customer-specific configuration | Customer product owner | Compliance and procurement |
-| Critical incident response | Joint customer and Supra AI leads | IT and compliance |
-| Expansion to new categories | Executive sponsor | KPI and risk review |
-| Pricing and renewal | Commercial owner | Measured ROI and usage data |
+| Product/compliance scope | Customer compliance owner | Procurement and relevant stakeholders |
+| Rule approval | Customer compliance owner | Supra AI delivery team |
+| Final compliance decision | Qualified human reviewer | Evidence and rule findings |
+| Production go-live | Customer business sponsor | Compliance and technical stakeholders |
+| Model/prompt changes | Supra AI delivery owner | Regression benchmark and compliance review |
+| Customer configuration | Customer product/business owner | Compliance and procurement |
+| Critical incident response | Joint customer/delivery leads | IT and compliance |
+| Expansion to new categories | Customer business sponsor | KPI and risk review |
+| Pricing/renewal | Commercial owner | Measured value and usage |
 
 ---
 
 # 14. Commercialisation Milestones
 
-The following milestones indicate movement from concept to a repeatable business:
-
 ### Milestone 1 — Validated problem
 
-- Customer confirms that supplier-document review is a significant operational problem.
-- A named business owner and representative document set are available.
-- Baseline manual effort is measured.
+- Customer confirms that supplier-document screening is a meaningful operational problem.
+- A representative document set is available.
+- Manual baseline effort is measured.
 
 ### Milestone 2 — Validated solution
 
-- POC processes representative documents.
-- Critical fields and rules produce understandable results.
-- Findings are evidence-linked.
-- Reviewers confirm that the output is useful.
+- The core workflow processes representative documents.
+- Extraction and classification are evaluated against labelled data.
+- Deterministic screening produces understandable results.
+- Findings are evidence-backed.
+- Reviewers confirm that outputs are useful.
 
 ### Milestone 3 — Validated workflow
 
-- Pilot users adopt the system.
-- Review-time reduction is demonstrated.
-- False positives and false negatives are understood and controlled.
-- Integration and governance requirements are documented.
+- Pilot users use the workflow.
+- Review-time impact is measured.
+- False positives, false negatives and ambiguous cases are understood.
+- Operational requirements are documented.
 
 ### Milestone 4 — Validated commercial case
 
-- Customer accepts production pricing.
-- Subscription value is supported by measured benefits.
-- Implementation effort is repeatable.
+- The customer accepts the production proposition.
+- Measured benefits support production pricing.
+- Onboarding effort is understood.
 - Support requirements are understood.
 
 ### Milestone 5 — Repeatable growth
 
-- Second customer can be onboarded using standard configuration.
-- Product-category expansion does not require major architectural changes.
-- Partner or direct sales channels produce qualified opportunities.
-- Gross margin and support economics are sustainable.
+- A second customer can be onboarded primarily through configuration.
+- Real-world performance remains acceptable across relevant document types.
+- Expansion does not require disproportionate custom development.
+- Support and unit economics are sustainable.
 
 ---
 
 # 15. Recommended Immediate Actions
 
-1. Create a POC charter with the initial customer.
-2. Agree the exact in-scope product categories, standards and document types.
-3. Obtain a representative labelled dataset containing both good and problematic documents.
-4. Measure the current manual review time and backlog.
-5. Define critical versus non-critical compliance fields.
-6. Implement evidence-location capture for every finding.
-7. Establish the pilot KPI baseline before changing the existing process.
-8. Add regression tests covering real-world documents and known failure modes.
-9. Identify the customer compliance owner and executive sponsor.
-10. Prepare a paid pilot proposal with fixed scope, timeline and exit criteria.
-11. Use pilot results to set production pricing rather than relying only on theoretical processing cost.
-12. Delay broad category expansion until the initial production workflow has met its KPIs for at least three months.
+1. Complete the current Round-2 MVP validation.
+2. Resolve remaining field-level extraction weaknesses, particularly `standards_tested`.
+3. Maintain the expanded real-world benchmark as the regression baseline.
+4. Validate SKU resolution and unmatched-SKU handling in the actual reviewer workflow.
+5. Ensure findings expose usable supporting evidence.
+6. Complete and validate the human-review workflow.
+7. Measure manual review time before and after assisted screening.
+8. Establish a representative customer pilot dataset.
+9. Define critical compliance conditions and escalation rules with the customer.
+10. Measure actual processing cost and operational effort.
+11. Use pilot measurements to validate the ROI/business case.
+12. Only then determine production pricing and broader commercial expansion.
 
 ---
 
 # 16. Strategic Recommendation
 
-Proceed with a controlled, paid pilot focused on consumer-electronics supplier documentation. Keep the product positioned as an auditable compliance-screening and workflow tool, not an autonomous compliance authority.
+Proceed with a **controlled customer pilot focused on consumer-electronics supplier documentation**.
 
-The strongest route to commercialisation is a high-touch B2B SaaS model:
+The strongest commercial proposition is not autonomous compliance decision-making. It is an **auditable AI-assisted screening workflow** that:
 
-- Paid POC.
-- Paid implementation-led pilot.
-- Annual production subscription.
-- Expansion through additional document volumes, product categories, integrations and supplier workflows.
+- Extracts information from supplier documents.
+- Applies transparent deterministic rules.
+- Connects documentation to products/SKUs.
+- Highlights missing, inconsistent or potentially problematic information.
+- Provides supporting evidence.
+- Keeps final compliance decisions with humans.
 
-The pilot-to-production decision should be driven by critical-miss performance, reviewer adoption, measurable time savings, evidence quality and a credible customer ROI—not by extraction accuracy on a small synthetic dataset alone.
+The current benchmark provides encouraging technical evidence, including 95.9% overall extraction accuracy and 13/13 agreement on the current audit benchmark, but this should not be presented as proof of production-scale reliability.
+
+The commercial decision should ultimately be based on **measured review-time reduction, critical-miss performance, evidence quality, reviewer adoption and customer value**, rather than AI inference cost or benchmark accuracy alone.
+
+The recommended path is therefore:
+
+> **Validate the workflow → measure customer value → deploy within the validated scope → expand only after evidence supports expansion.**

@@ -43,7 +43,7 @@ These figures represent the value of reviewer capacity released. They should not
 
 | Type | Items |
 |---|---|
-| Measured or documented project value | Estimated AI processing cost of approximately $0.0004 per document |
+|  Planning assumption / estimated operating cost | Estimated AI processing cost of approximately $0.0004 per document |
 | Repository/project assumptions | Approximately 2,000 active SKUs; approximately 150 documents per month |
 | Planning assumptions | 30 minutes manual review time; €40–€60 reviewer cost per hour; 20%–60% time savings |
 | Calculated outputs | Annual benefit, total cost, net benefit, ROI, and break-even period |
@@ -203,7 +203,7 @@ Actual break-even should be recalculated during the pilot using measured review 
 | Annual benefit | €7,200 | €18,000 | €32,400 |
 | 12-month total cost | €6,080 | €4,810 | €3,540 |
 | 12-month net benefit | €1,120 | €13,190 | €28,860 |
-| 12-month ROI | 18% | 274% | 274% |
+| 12-month ROI | 18% | 274% | 815% |
 | 36-month total cost | €8,240 | €6,130 | €4,020 |
 | 36-month benefit | €21,600 | €54,000 | €97,200 |
 | 36-month net benefit | €13,360 | €47,870 | €93,180 |
@@ -270,11 +270,11 @@ These are initial assessment scores for the MVP and should be reviewed during th
 
 | # | Risk | Category | Likelihood | Impact | Score | Mitigation |
 |---:|---|---|---:|---:|---:|---|
-| 1 | Incorrect extraction causes a missed or incorrect finding | Technical | 3 | 5 | 15 | Use labelled evaluation data, field-level accuracy checks, evidence-linked extraction, confidence thresholds, and mandatory human review |
+| 1 | Incorrect extraction causes a missed or incorrect finding | Technical | 3 | 5 | 15 | Planned mitigation - use labelled evaluation data, field-level accuracy checks, evidence-linked extraction, confidence thresholds, and mandatory human review |
 | 2 | Compliance rules become outdated or incomplete | Regulatory | 3 | 5 | 15 | Version all rules, assign rule ownership, schedule periodic regulatory review, and require approval before rule changes are deployed |
-| 3 | Users treat AI output as a final compliance decision | Ethical / Governance | 2 | 5 | 10 | Maintain mandatory human approval, display clear decision boundaries, separate extracted facts from interpretations, and log reviewer decisions |
+| 3 | Users treat AI output as a final compliance decision | Ethical / Governance | 2 | 5 | 10 | Require human review for flagged/ambiguous cases and clearly distinguish AI output from final reviewer decisions |
 | 4 | Supplier documents contain confidential or personal information | Privacy / Technical | 3 | 4 | 12 | Apply data minimisation, use synthetic/public data for the capstone, restrict access, define retention controls, and document data flows |
-| 5 | Poor-quality or scanned PDFs reduce extraction accuracy | Technical | 4 | 4 | 16 | Add document-quality detection, OCR fallback where available, unsupported-format handling, and human escalation |
+| 5 | Poor-quality or scanned PDFs reduce extraction accuracy | Technical | 4 | 4 | 16 | Add  document-quality detection, unsupported-format handling, and human escalation |
 | 6 | API, workflow, or LLM outage interrupts screening | Operational | 3 | 4 | 12 | Use retries, queues, monitoring, failure alerts, logging, and a documented manual fallback process |
 | 7 | Incorrect SKU matching produces an incorrect screening result | Operational / Technical | 3 | 5 | 15 | Use exact and normalised matching, detect ambiguity, require human review for uncertain matches, and retain the source values |
 | 8 | ROI assumptions overestimate actual time savings | Business | 3 | 3 | 9 | Measure manual baseline time, compare before-and-after screening time during the pilot, and update the financial model using observed results |
