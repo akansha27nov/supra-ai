@@ -643,6 +643,7 @@ export default function AuditDetailPage() {
           </div>
         )}
         <CopilotChatPanel
+          key={audit.RecordID}
           recordId={audit.RecordID}
           supplierName={audit.Supplier}
           isOpen={showCopilot}
