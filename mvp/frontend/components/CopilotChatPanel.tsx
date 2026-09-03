@@ -1,9 +1,39 @@
+// frontend/components/CopilotChatPanel.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { Bot, Send, ShieldAlert } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { sendCopilotMessage, type ChatMessage } from "@/lib/api";
 
+// Shared markdown component overrides — keeps assistant replies on the same
+// typography/spacing scale as the rest of the panel instead of falling back
+// to the browser's default <ul>/<strong> styling.
+const markdownComponents = {
+  p: ({ children }: { children?: React.ReactNode }) => (
+    <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>
+  ),
+  strong: ({ children }: { children?: React.ReactNode }) => (
+    <strong className="font-semibold text-on-surface">{children}</strong>
+  ),
+  ul: ({ children }: { children?: React.ReactNode }) => (
+    <ul className="mb-2 last:mb-0 list-disc pl-4 space-y-1">{children}</ul>
+  ),
+  ol: ({ children }: { children?: React.ReactNode }) => (
+    <ol className="mb-2 last:mb-0 list-decimal pl-4 space-y-1">{children}</ol>
+  ),
+  li: ({ children }: { children?: React.ReactNode }) => (
+    <li className="leading-relaxed">{children}</li>
+  ),
+  code: ({ children }: { children?: React.ReactNode }) => (
+    <code className="font-code-sm bg-surface-container-highest px-1 py-0.5 rounded text-xs">
+      {children}
+    </code>
+  ),
+};
+
+// Local display type — api.ts's ChatMessage is the wire shape (role/content
+// only); `grounded` is per-reply UI metadata, never sent back to the server.
 type DisplayMessage = ChatMessage & { grounded?: boolean };
 
 interface CopilotChatPanelProps {
@@ -93,7 +123,11 @@ export default function CopilotChatPanel({ recordId, supplierName, isOpen, onClo
                     : "max-w-[85%] rounded-lg bg-surface-container px-3 py-2 text-sm text-on-surface"
                 }
               >
-                <div className="whitespace-pre-wrap">{m.content}</div>
+                {m.role === "assistant" ? (
+                  <ReactMarkdown components={markdownComponents}>{m.content}</ReactMarkdown>
+                ) : (
+                  <div className="whitespace-pre-wrap">{m.content}</div>
+                )}
                 {m.role === "assistant" && m.grounded === false && (
                   <div className="mt-1.5 border-t border-outline-variant pt-1.5 text-[11px] text-error flex items-center gap-1">
                     <ShieldAlert size={12} /> This may go beyond the evidence on file for this case.
