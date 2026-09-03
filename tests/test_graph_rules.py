@@ -79,9 +79,10 @@ def test_excess_lead_is_rejected(base_state):
     assert "LEAD_EXCESS_VIOLATION" in violation_codes(result)
 
 
-def test_excess_lead_with_exemption_requires_review_flag(base_state):
+def test_excess_lead_with_verified_exemption_requires_review_flag(base_state):
     base_state["extracted"]["tested_lead_ppm"] = 1500
     base_state["extracted"]["lead_exemption_cited"] = True
+    base_state["extracted"]["exemption_independently_verified"] = True
     base_state["associated_sku"] = "SKU-001"
     base_state["sku_match_status"] = "matched"
 
@@ -90,6 +91,23 @@ def test_excess_lead_with_exemption_requires_review_flag(base_state):
     assert result["audit_result"]["decision"] == "FLAGGED"
     assert result["audit_result"]["score"] == 60
     assert "LEAD_EXEMPTION_CLAIMED" in violation_codes(result)
+
+
+def test_excess_lead_with_unverified_exemption_is_rejected(base_state):
+    # A self-declared exemption that the lab did NOT independently verify is not
+    # sufficient grounds to waive the violation — see extract_node's prompt for
+    # exemption_independently_verified.
+    base_state["extracted"]["tested_lead_ppm"] = 1500
+    base_state["extracted"]["lead_exemption_cited"] = True
+    base_state["extracted"]["exemption_independently_verified"] = False
+    base_state["associated_sku"] = "SKU-001"
+    base_state["sku_match_status"] = "matched"
+
+    result = rule_engine_node(base_state)
+
+    assert result["audit_result"]["decision"] == "REJECTED"
+    assert result["audit_result"]["score"] == 95
+    assert "UNVERIFIED_EXEMPTION_LEAD_EXCESS" in violation_codes(result)
 
 
 def test_missing_critical_standard_is_flagged(base_state):

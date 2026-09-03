@@ -1,53 +1,140 @@
-# MVP Documentation — Supra AI Compliance Document Auditor
+# Supra AI — MVP Documentation
 
-This documents the Round 2 working MVP: a FastAPI backend running a LangGraph extraction/screening pipeline, and a Next.js frontend for reviewers. This is the deployable product, distinct from the n8n POC in `poc/` (see `poc/poc_documentation.md`) and from the Round 1 baseline in `n8n/`.
+## 1. Purpose
 
-## 1. What the MVP Does
+Supra AI is a working AI-assisted supplier compliance screening MVP for mid-sized consumer-electronics retailers. Instead of a compliance team manually reading every supplier PDF, the product extracts structured facts from the document, checks those facts against deterministic compliance rules and an internal SKU catalog, and surfaces a prioritised, evidence-linked finding for a human reviewer to act on.
 
-A reviewer uploads a supplier compliance PDF (Declaration of Conformity or lab test report). The system:
+The MVP demonstrates the complete product loop:
 
-1. Extracts structured fields via an LLM (supplier, dates, standards, measured chemical values, evidence quotes/pages).
-2. Classifies the document type and resolves the product against an internal SKU catalog (explicit `matched`/`unmatched`/`not_attempted` states — never silent).
-3. Runs a deterministic rule engine (expiry, missing standards, lead-threshold, lab accreditation, SKU match) to produce `APPROVED` / `FLAGGED` / `REJECTED` / `REQUIRES_HUMAN_REVIEW` plus a 0–100 score.
-4. Persists the result to an audit ledger, with structured evidence (exact quote, page, section) carried through, not just a flat summary.
-5. Lets a human reviewer approve/reject, and — for `FLAGGED`/`REJECTED` documents — generate, edit, approve, and send a supplier gap notice, with the full lifecycle persisted and status-tracked.
-6. Sends a best-effort internal Telegram notification when a gap notice is marked sent.
+**Upload PDF → LLM extraction → field validation / reconciliation → SKU resolution → deterministic rule screening → reviewer decision → supplier gap notice**
 
-The core AI capability (extraction + rule-based screening) runs end to end against real PDFs, not synthetic mocks.
+This is the Round 2 working MVP — a FastAPI backend running a LangGraph extraction/screening pipeline, plus a Next.js frontend for reviewers. It is distinct from the n8n POC in `poc/` (see `poc/poc_documentation.md`) and from the Round 1 baseline in `n8n/`.
 
-## 2. Architecture
+Live frontend: [`supra-ai`](https://supra-ai.netlify.app/) · Live API: [`api`](https://supra-ai.onrender.com/) — fill in once the deployments are finalised.
+
+## 2. What the MVP demonstrates
+
+The core AI capability actually runs end to end against real PDFs, not synthetic mocks. The MVP is not a static prototype.
+
+It currently supports:
+
+- LLM-based extraction of certificate fields — supplier, dates, standards tested, measured chemical values, and page/section-linked evidence quotes;
+- explicit field-status tracking (`present` / `absent_expected` / `absent_appropriate` / `ambiguous`) rather than silently treating a missing field as a pass;
+- a bounded reconciliation loop that re-runs targeted extraction up to twice before escalating to a human, instead of guessing or looping forever;
+- SKU resolution against an internal catalog with an explicit `matched` / `unmatched` / `not_attempted` state;
+- a deterministic rule engine covering expiry, mandatory-standard coverage, lead-ppm thresholds (with a two-tier self-declared-vs-lab-verified exemption check), and lab accreditation;
+- a `APPROVED` / `FLAGGED` / `REJECTED` / `REQUIRES_HUMAN_REVIEW` decision with a 0–100 score, persisted with structured evidence, not just a flat summary;
+- human review of every audited document, with the AI never making the final compliance call;
+- generation, editing, approval, and sending of a supplier gap notice for `FLAGGED`/`REJECTED` documents, with the full lifecycle status-tracked;
+- a best-effort internal Telegram notification when a gap notice is marked sent;
+- full observability — every graph run is traced in LangSmith.
+
+## 3. Architecture
+
+### Frontend
+
+- Next.js (TypeScript)
+- Hosted on Netlify (`mvp/frontend/netlify.toml`, `@netlify/plugin-nextjs`)
+- Pages: `/` (upload + inspect a single audit), `/audits` (queue), `/audits/[id]` (detail — evidence viewer, review actions, gap-notice modal), `/analytics`
+
+The frontend talks to the backend over HTTPS/JSON via `lib/api.ts`, pointed at `NEXT_PUBLIC_API_URL` (falls back to `http://localhost:8000/api` for local development).
+
+### Backend
+
+- FastAPI (`agent/server.py`)
+- Hosted on Render
+- Routes: `POST /api/audit` (run the pipeline on an uploaded PDF), `GET /api/logs` (read the ledger, joined with live gap-notice status), `PATCH /api/logs/{id}/review` (human approve/reject), `/api/gap-notice*` (full gap-notice lifecycle: create, get, edit, approve, send)
+
+### Database
+
+- Postgres, hosted on Render (`agent/db.py`, via `DATABASE_URL`)
+- `init_db()` creates both tables on every startup if they don't already exist
+- Persisted objects:
+  - `audit_ledger` — one row per audited document (decision, score, flags, SKU match, review status)
+  - `gap_notices` — the full supplier gap-notice lifecycle, linked back to the audit that triggered it
+
+This replaces the MVP's earlier flat-file persistence (`logs/master_audit_ledger.csv`, `data/gap_notices.json`), which did not survive Render's ephemeral disk across redeploys or restarts.
+
+### AI / orchestration
+
+- LangGraph (`agent/graph.py`) is used to construct the extraction/validation/screening state machine.
+- OpenAI models power structured-output extraction, and gap-notice drafting.
+- LangSmith tracing is enabled via `LANGCHAIN_PROJECT` in `.env` for prompt/output inspection, latency, and debugging.
+
+### System diagram
 
 ```text
-┌─────────────────┐      HTTP         ┌──────────────────┐      LangGraph      ┌─────────────────┐
-│  Next.js         │ ───────────────▶│  FastAPI          │ ──────────────────▶ │  agent/graph.py  │
-│  (mvp/frontend)  │◀────────────────│  (agent/server.py)│◀────────────────────│  LLM + rule      │
-└─────────────────┘      JSON        └──────────────────┘                      │  engine pipeline  │
-                                              │
-          └───────────────────────────────────────────────────────────────────┘
-                                              │
-                                              ▼
-                                   ┌────────────────────────┐
-                                   │  Local filesystem      │
-                                   │  logs/master_audit_    │
-                                   │  ledger.csv            │
-                                   │  data/gap_notices.json │
-                                   └────────────────────────┘
+┌────────────────────┐            ┌────────────────────┐            ┌────────────────────┐
+│      Next.js       │  ──HTTP──▶ │      FastAPI       │ ─LangGraph▶│   agent/graph.py   │
+│   (mvp/frontend)   │  ◀──JSON── │ (agent/server.py)  │ ◀─pipeline─│ LLM + rule engine  │
+│      Netlify       │            │       Render       │            │      pipeline      │
+└────────────────────┘            └────────────────────┘            └────────────────────┘
+                                             │
+                                             ▼
+                                  ┌────────────────────┐
+                                  │ Postgres (Render)  │
+                                  │    audit_ledger    │
+                                  │    gap_notices     │
+                                  └────────────────────┘
 ```
 
-- **Backend:** `agent/server.py` (FastAPI). Routes: `/api/audit` (run the pipeline on an uploaded PDF), `/api/logs` (read the ledger, joined with live gap-notice status), `/api/logs/{id}/review` (human approve/reject), `/api/gap-notice*` (full gap-notice lifecycle: create, get, edit, approve, send).
-- **Pipeline:** `agent/graph.py` — a LangGraph `StateGraph`: extract → classify document type → validate fields → (reconcile if ambiguous, bounded to 2 retries) → resolve SKU → rule engine → (flag for human review if needed).
-- **Persistence:** flat files, not a database — `logs/master_audit_ledger.csv` (audit ledger) and `data/gap_notices.json` (gap-notice records). Deliberately simple for MVP scale; see Section 6 for what this means on Render.
-- **Frontend:** `mvp/frontend` (Next.js, TypeScript). Pages: `/` (upload + inspect a single audit), `/audits` (queue), `/audits/[id]` (detail, evidence viewer, gap-notice lifecycle), `/analytics`.
-- **Observability:** every graph run is traced in LangSmith (`LANGCHAIN_PROJECT` in `.env`).
+## 4. Core AI flows
 
-## 3. Prerequisites
+### 4.1 Extraction
 
-- Python 3.12 (developed/tested on 3.12.3)
-- Node.js 18+ (for the Next.js frontend)
-- An OpenAI API key
-- Optional: a LangSmith API key (tracing), a Telegram bot token + chat ID (gap-notice-sent notifications)
+`extract_node` sends the raw PDF text to an LLM with structured output, pulling out supplier name, certificate/lab IDs, issue/expiration dates, standards tested, measured lead concentration, and an `evidence_links` list mapping each field to its exact quote and page number.
 
-## 4. Local Setup
+The extraction prompt is deliberately explicit about not confusing a statutory chemical limit with a measured lab result, and about determining `exemption_independently_verified` whenever a lead exemption is cited — this distinction matters directly to the rule engine (Section 4.4).
+
+### 4.2 Validation and reconciliation
+
+`validate_fields_node` classifies every extracted field's status given the document type — `present`, `absent_expected` (should be there but isn't), `absent_appropriate` (fine to be missing for this doc type), or `ambiguous` (present but not trustworthy, e.g. an unrecognised statutory threshold value).
+
+`route_after_validation` is the safety gate: if any field is `absent_expected` or `ambiguous`, the graph loops back through `reconcile_node` for a targeted re-extraction — bounded to 2 attempts. After that, or if `doc_type` couldn't be classified at all, it routes to `flag_for_human_review_node` instead of silently guessing.
+
+### 4.3 SKU resolution
+
+`resolve_sku_node` matches the extracted product against the internal SKU catalog (`data/skus.json`). The result is always one of `matched`, `unmatched`, or `not_attempted` — an unresolved product is never dropped silently, it flows into the rule engine as its own condition.
+
+### 4.4 Rule engine
+
+`rule_engine_node` runs deterministic checks: certificate expiry (including an "expiring soon" window), missing mandatory standards (weighted by whether the missing standard is safety-critical), lead-ppm threshold against the SKU's own limit, and lab accreditation.
+
+The lead-ppm check has a two-tier exemption path: a cited exemption that the lab **independently verified** is treated as a lighter `FLAGGED` finding, while a **self-declared, unverified** exemption is treated as a `REJECTED` violation — a self-declaration alone is not sufficient grounds to waive a measured excess.
+
+Every violation carries a severity score; the aggregate score maps to `APPROVED` (< 50), `FLAGGED` (50–84), or `REJECTED` (≥ 85).
+
+### 4.5 Human review and gap notices
+
+The rule engine's output is a recommendation, not a final decision. A reviewer approves or overrides it via `PATCH /api/logs/{id}/review`. For `FLAGGED`/`REJECTED` documents, a reviewer can generate a supplier gap notice, edit the draft, approve it, and send it — with each state transition persisted in `gap_notices` and a best-effort Telegram alert fired when a notice is marked sent.
+
+### 4.6 Observability
+
+Every LangGraph run — extraction, reconciliation attempts, rule evaluation — is traced in LangSmith under `LANGCHAIN_PROJECT`, so a reviewer or engineer can inspect exactly what the model saw and produced for any audited document.
+
+## 5. Repository structure (MVP-relevant paths)
+
+```
+agent/
+├── server.py            # FastAPI app — all HTTP routes
+├── graph.py              # LangGraph pipeline: extraction → rules → routing
+├── db.py                  # Postgres persistence (audit ledger + gap notices)
+├── schemas.py              # Pydantic models (extraction, rule violations, gap notice records)
+├── gap_notice.py            # Gap notice generation + lifecycle transitions
+├── gap_notice_store.py       # Gap notice CRUD against Postgres
+├── telegram_dispatch.py       # Best-effort Telegram notification on gap-notice SENT
+└── run_pdf.py                 # CLI runner
+
+mvp/frontend/
+├── app/page.tsx               # Upload + single-audit inspection
+├── app/audits/page.tsx         # Audit queue
+├── app/audits/[id]/page.tsx     # Audit detail: evidence viewer, review actions, gap-notice modal
+└── lib/api.ts, lib/exportUtils.ts    # API client, CSV export
+
+tests/                          # pytest suite
+```
+
+## 6. How to run locally
 
 ### Backend
 
@@ -57,11 +144,11 @@ cd supra-ai
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env             # fill in OPENAI_API_KEY at minimum
+cp .env.example .env             # fill in OPENAI_API_KEY and DATABASE_URL at minimum
 uvicorn agent.server:app --reload --port 8000
 ```
 
-The API is now at `http://localhost:8000`. `logs/` and `data/` are created automatically on first run if they don't exist.
+The API is now at `http://localhost:8000`. `init_db()` creates the Postgres tables automatically on first run if they don't exist — point `DATABASE_URL` at any Postgres instance (local, or Render's).
 
 ### Frontend
 
@@ -71,25 +158,19 @@ npm install
 npm run dev
 ```
 
-The app is now at `http://localhost:3000`, pointed at `http://localhost:8000/api` by default (see `lib/api.ts`; override with `NEXT_PUBLIC_API_URL` if the backend runs elsewhere).
+The app is now at `http://localhost:3000`, pointed at `http://localhost:8000/api` by default (see `lib/api.ts`); set `NEXT_PUBLIC_API_URL` to point at a deployed backend instead.
 
 ### Verify it's working
 
 ```bash
 pytest tests/ -q
 ```
-Expect ~99 passed and 3 pre-existing failures unrelated to this MVP (see Section 7) — `test_graph_routing.py::test_route_to_reconcile_when_fields_are_missing_before_two_attempts`, `test_graph_routing.py::test_route_to_human_review_after_two_attempts`, and `test_graph_rules.py::test_excess_lead_with_exemption_requires_review_flag`. One test (`test_extract_pdf_text_reads_all_pages`) is skipped instead of passing if the optional `reportlab` package isn't installed — that's expected, not a failure.
 
-## 5. Environment Variables (`.env`)
+Expect all tests to pass. If `reportlab` isn't installed, one PDF-generation test is skipped rather than failing — that's expected.
 
-| Variable | Required | Purpose |
-|---|---|---|
-| `OPENAI_API_KEY` | **Yes** | Powers all LLM extraction and gap-notice drafting calls |
-| `LANGCHAIN_TRACING_V2`, `LANGCHAIN_API_KEY`, `LANGCHAIN_PROJECT`, `LANGCHAIN_ENDPOINT` | No | LangSmith tracing; pipeline still runs without it, just unobserved |
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | No | Enables the gap-notice-sent internal Telegram alert; silently skipped (`telegram_notification: "not_configured"`) if absent |
-| `NOTION_API_KEY`, `NOTION_DATABASE_ID` | No | Used by the n8n POC / `langsmith/trace_sample.py` evaluation scripts, not by the FastAPI MVP itself |
+## 7. Deployment
 
-## 6. Deploying the Backend (Render)
+### Backend → Render
 
 **Service type:** Web Service, Python environment.
 
@@ -98,48 +179,54 @@ Expect ~99 passed and 3 pre-existing failures unrelated to this MVP (see Section
 | Build command | `pip install -r requirements.txt` |
 | Start command | `uvicorn agent.server:app --host 0.0.0.0 --port $PORT` |
 | Root directory | repo root (imports are `agent.*`, resolved relative to the repo root — do not set a subdirectory) |
-| Environment variables | Same as `.env` (Section 5) — set `OPENAI_API_KEY` at minimum in Render's dashboard, not in a committed file |
+| Environment variables | Same as `.env` (Section 8) — set `OPENAI_API_KEY` and `DATABASE_URL` in Render's dashboard, not in a committed file |
 
-**Important limitation — ephemeral disk.** The MVP persists the audit ledger and gap-notice records as local files (`logs/master_audit_ledger.csv`, `data/gap_notices.json`), not a database. Render's free/starter web services do **not** guarantee persistent local storage — files can be wiped on redeploy, restart, or across instances if the service scales beyond one dyno. For a demo/pilot this is usually fine (data persists across normal uptime), but:
-- Don't rely on ledger history surviving a redeploy.
-- For anything beyond a demo, this needs either Render's paid persistent disk add-on or migrating `append_to_master_csv`/`gap_notice_store.py` to a real database (Postgres is the natural fit given Render offers it natively) — not done in this MVP, flagged here as a known next step, not a silent gap.
+**CORS.** `agent/server.py` currently sets `allow_origins=["*"]` (flagged inline as adjust-for-production). This works immediately but should be tightened to the deployed frontend's origin once that's stable.
 
-**CORS.** `agent/server.py` currently sets `allow_origins=["*"]` (see the inline comment marking this as adjust-for-production). This will work immediately on Render but should be tightened to the actual frontend origin once that's deployed and stable.
+### Database → Render Postgres
 
-**Frontend pointing at the deployed backend.** Once the Render URL is live, set `NEXT_PUBLIC_API_URL` (e.g. in a Vercel deployment, or a local `.env.local` for the frontend) to that URL so the frontend stops pointing at `localhost:8000`.
+Provision a Render Postgres instance and attach its connection string as `DATABASE_URL` on the backend service. Render sometimes provides `postgres://`; `agent/db.py` normalises this to `postgresql://` for psycopg2.
 
-## 7. Known Limitations
+### Frontend → Netlify
 
-- **Two Celestron-related findings, still open:** the live LLM extraction call doesn't reliably parse the one real lab report's scientific-notation lead value (`2.93×10⁴` → should be `29300` ppm), causing that benchmark entry to under-score. A separate, now-fixed issue (an unmatched-SKU early-return in `langsmith/trace_sample.py` that masked other violations) was patched and verified; the extraction-parsing issue was not, per explicit scope decision.
-- **`trace_sample.py` and `agent/graph.py` are two separately maintained rule engines**, not one shared implementation. One specific divergence between them was fixed (see above); others may exist. The benchmark scripts test `trace_sample.py`, not the actual production pipeline the API serves.
+Builds from `mvp/frontend` (`netlify.toml`: `npm run build`, publish `.next`, via `@netlify/plugin-nextjs`). Set `NEXT_PUBLIC_API_URL` to the Render backend URL in Netlify's environment variables so the frontend stops pointing at `localhost:8000`.
+
+## 8. Environment configuration
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `OPENAI_API_KEY` | **Yes** | Powers all LLM extraction and gap-notice drafting calls |
+| `DATABASE_URL` | **Yes** | Postgres connection string for the audit ledger + gap notices |
+| `LANGCHAIN_TRACING_V2`, `LANGCHAIN_API_KEY`, `LANGCHAIN_PROJECT`, `LANGCHAIN_ENDPOINT` | No | LangSmith tracing; pipeline still runs without it, just unobserved |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | No | Enables the gap-notice-sent internal Telegram alert; silently skipped (`telegram_notification: "not_configured"`) if absent |
+| `NOTION_API_KEY`, `NOTION_DATABASE_ID` | No | Used by the n8n POC / `langsmith/trace_sample.py` evaluation scripts, not by the FastAPI MVP itself |
+
+Secrets must not be committed to the repository — see `.env.example` for the full template.
+
+## 9. Testing and observability
+
+The pytest suite covers:
+
+- graph routing (`route_after_validation` — reconcile vs. resolve vs. escalate to human review);
+- rule-engine decisions (expiry, standards, lead-ppm thresholds including both exemption tiers, lab accreditation, SKU match);
+- schema validation and data-integrity checks;
+- the audit-ledger CLI runner.
+
+LangSmith tracing can be enabled for any of the above via `LANGCHAIN_TRACING_V2=true`. Every extraction, reconciliation attempt, and rule evaluation is inspectable per run once tracing is on.
+
+## 10. Known limitations
+
+- **Two Celestron-related findings, still open:** the live LLM extraction call doesn't reliably parse the one real lab report's scientific-notation lead value (`2.93×10⁴` → should be `29300` ppm), causing that benchmark entry to under-score.
+- **`trace_sample.py` and `agent/graph.py` are two separately maintained rule engines**, not one shared implementation. The benchmark scripts test `trace_sample.py`, not the actual production pipeline the API serves — a rule change in one is not guaranteed to be mirrored in the other.
 - **No retry/error handling on LLM extraction failures** (e.g. a low-quality scan or non-English document) — a genuine parsing failure surfaces as bad data rather than a clean, user-facing error.
-- **Flat-file persistence** — see Section 6. Not a database; fine for MVP/pilot scale, not production scale.
 - **No auth.** Any client that can reach the API can call every endpoint. Fine for a local/demo deployment, not for a real pilot with real supplier data.
 - **SKU catalog is a static JSON file** (`data/skus.json` / `data/real_skus.json`), not a live PIM/ERP integration.
+- **CORS is currently open** (`allow_origins=["*"]`) — needs tightening to the deployed frontend origin before any real pilot.
 
-## 8. Repository Map (MVP-relevant paths)
+The MVP proves the product and AI flow end to end; it is deliberately not production-hardened yet — see `strategic_plan.md` for what's scoped for the pilot phase.
 
-```
-agent/
-├── server.py            # FastAPI app — all HTTP routes
-├── graph.py              # LangGraph pipeline: extraction → rules → routing
-├── schemas.py             # Pydantic models (extraction, rule violations, gap notice records)
-├── gap_notice.py           # Gap notice generation + lifecycle transitions
-├── gap_notice_store.py      # JSON-file persistence for gap notices
-├── telegram_dispatch.py      # Best-effort Telegram notification on gap-notice SENT
-└── run_pdf.py                # CLI runner + master CSV ledger writer
+## 11. Relationship to the other deliverables
 
-mvp/frontend/
-├── app/page.tsx              # Upload + single-audit inspection
-├── app/audits/page.tsx        # Audit queue
-├── app/audits/[id]/page.tsx    # Audit detail: evidence viewer, review actions, gap-notice modal
-└── lib/api.ts, lib/exportUtils.ts   # API client, CSV export
-
-tests/                        # pytest suite — 98 passing, 1 skipped, 3 pre-existing unrelated failures
-```
-
-## 9. Relationship to the Other Deliverables
-
-- **Round 1 POC** (`n8n/`): the original workflow, unmodified, kept as a baseline for comparison.
-- **Round 2 POC** (`poc/`): the same n8n workflow extended with one new capability (gap-notice drafting) to show evolution without duplicating MVP depth — see `poc/poc_documentation.md`.
-- **This MVP**: the real, running product. Everything the POC gestures at (draft generation) is here with full persistence, an editable/approvable/sendable lifecycle, structured evidence, and a proper reviewer UI.
+- **Round 1 POC** (`n8n/`) — the original workflow, unmodified, kept as a baseline for comparison.
+- **Round 2 POC** (`poc/`) — the same n8n workflow extended with one new capability (gap-notice drafting) to show evolution without duplicating MVP depth — see `poc/poc_documentation.md`.
+- **This MVP** — the real, running product. Everything the POC gestures at (draft generation) is here with full Postgres persistence, an editable/approvable/sendable lifecycle, structured evidence, and a proper reviewer UI.

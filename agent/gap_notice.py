@@ -12,6 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langsmith import traceable
 import uuid
+from agent.llm_reliability import ExtractionFailedError, invoke_with_retry  # noqa: F401 (re-exported for callers)
 from agent.schemas import GapNoticeRecord, GapNoticeStatus
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
@@ -58,13 +59,6 @@ def generate_supplier_gap_notice(
     evidence_detail: list[dict[str, Any]] = []
     for flag in actionable_flags:
         issue_text = f"- Rule: {flag.get('code')}\n  Message: {flag.get('message')}"
-
-        # Include evidence context if present from the rule engine output.
-        # This is fed into the LLM prompt as plain text (issue_text below) so
-        # it can write natural prose in the email draft -- but the exact
-        # quote/page_number/section is ALSO captured separately here,
-        # untouched by the LLM, so the persisted GapNoticeRecord can carry
-        # real structured evidence instead of the LLM's paraphrase of it.
         evidence = flag.get("evidence")
         quote = None
         page_number = None
@@ -122,19 +116,18 @@ def generate_supplier_gap_notice(
     structured_llm = llm.with_structured_output(StructuredGapNotice)
     chain = prompt | structured_llm
     
-    response = chain.invoke({
-        "supplier_name": supplier_name,
-        "sku": sku_display,
-        "doc_id": doc_id,
-        "decision": decision,
-        "issues_list": issues_list,
-    })
+    response = invoke_with_retry(
+        lambda: chain.invoke({
+            "supplier_name": supplier_name,
+            "sku": sku_display,
+            "doc_id": doc_id,
+            "decision": decision,
+            "issues_list": issues_list,
+        }),
+        step="gap_notice_draft",
+    )
 
     result = response.model_dump()
-    # Structured evidence sourced directly from the rule engine's own flags
-    # (evidence_detail, built above), separate from `result["evidence"]`
-    # which is the LLM's own free-text list used only for prompt/prose
-    # purposes. create_gap_notice_record() persists evidence_detail.
     result["evidence_detail"] = evidence_detail
     return result
 
@@ -198,18 +191,6 @@ def approve_gap_notice_for_sending(
 @traceable(name="send_gap_notice", run_type="chain")
 def send_gap_notice(record: dict[str, Any]) -> dict[str, Any]:
     """Transitions an APPROVED_FOR_SENDING record to SENT.
-
-    Previously DRAFT->EDITED->APPROVED_FOR_SENDING were the only handled
-    transitions; SENT existed in the GapNoticeStatus enum but was
-    structurally unreachable. This closes that gap -- but only at the status
-    level.
-
-    IMPORTANT: this function only records that the notice was marked as
-    sent. No email/SMTP/SendGrid dispatch mechanism exists anywhere in this
-    codebase yet -- the frontend's "Send Notice to Supplier" button remains a
-    simulated action. Wiring up real dispatch is a separate, explicitly
-    lower-priority piece of work. Callers should treat the resulting SENT
-    status as "recorded as sent", not "delivered to the supplier's inbox".
     """
     if record.get("status") != GapNoticeStatus.APPROVED_FOR_SENDING:
         raise ValueError(

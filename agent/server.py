@@ -24,7 +24,7 @@ from agent.gap_notice_store import (
     list_records,
     save_record,
 )
-from agent.graph import graph
+from agent.graph import ExtractionFailedError, graph
 from agent.run_pdf import load_sku_catalog
 from agent.schemas import ApproveGapNoticeRequest, GapNoticeStatus, UpdateGapNoticeRequest
 from agent.telegram_dispatch import (
@@ -46,6 +46,7 @@ app.add_middleware(
 
 UPLOAD_DIR = Path("data/uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+MIN_EXTRACTABLE_CHARS = 40
 
 # Load SKU catalog once at startup — the graph passes it through in state
 # so the audit result carries sku context into the ledger.
@@ -53,8 +54,7 @@ SKU_CATALOG = load_sku_catalog(Path("data/skus.json"))
 print(f"[startup] Loaded {len(SKU_CATALOG)} SKUs from data/skus.json")
 
 # Creates audit_ledger + gap_notices tables in Postgres if they don't exist yet.
-# Requires DATABASE_URL to be set (Render injects this automatically once a
-# Postgres instance is linked to this service).
+# Requires DATABASE_URL to be set 
 db.init_db()
 
 
@@ -81,12 +81,32 @@ async def audit_uploaded_pdf(file: UploadFile = File(...)):   # noqa: B008
     with open(file_path, "wb") as buffer:    # noqa: ASYNC230
         shutil.copyfileobj(file.file, buffer)
 
-    raw_text = ""
-    with pdfplumber.open(file_path) as pdf:
-        for page in pdf.pages:
-            t = page.extract_text()
-            if t:
-                raw_text += t + "\n"
+    try:
+        raw_text = ""
+        with pdfplumber.open(file_path) as pdf:
+            for page in pdf.pages:
+                t = page.extract_text()
+                if t:
+                    raw_text += t + "\n"
+    except Exception as e:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Could not read '{file.filename}' as a PDF — the file may be corrupted "
+                f"or not actually a PDF. ({e.__class__.__name__})"
+            ),
+        ) from e
+
+    if len(raw_text.strip()) < MIN_EXTRACTABLE_CHARS:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"'{file.filename}' has no extractable text (found "
+                f"{len(raw_text.strip())} characters). This usually means the PDF is a "
+                "scanned image without a text layer. Please upload a text-based PDF, or "
+                "run OCR on it first."
+            ),
+        )
 
     # Run through LangGraph — pass sku_catalog so the pipeline can do
     # SKU-aware checks and the result carries sku context into the ledger.
@@ -105,14 +125,20 @@ async def audit_uploaded_pdf(file: UploadFile = File(...)):   # noqa: B008
         "audit_result": None,
     }
 
-    result = graph.invoke(
-        initial_state,
-        config={
-            "run_name": f"audit_{file.filename}",
-            "tags": ["live_upload"],
-            "metadata": {"file_name": file.filename, "data_source": "live_upload"},
-        },
-    )
+    try:
+        result = graph.invoke(
+            initial_state,
+            config={
+                "run_name": f"audit_{file.filename}",
+                "tags": ["live_upload"],
+                "metadata": {"file_name": file.filename, "data_source": "live_upload"},
+            },
+        )
+    except ExtractionFailedError as e:
+        # Never persist a failed extraction as if it were a real audit — no row
+        # goes into audit_ledger here, and the reviewer sees a clean, specific
+        # reason rather than a generic 500 / a blank result.
+        raise HTTPException(status_code=502, detail=e.reason) from e
 
     # Defensive passthrough fields — graph nodes may not set these,
     # but insert_audit_records reads them from the result dict.
@@ -211,12 +237,15 @@ async def create_gap_notice(body: GapNoticeRequest):
     if existing:
         return {"record": existing, "created": False}
 
-    result = generate_supplier_gap_notice(
-        audit_result=body.audit_result,
-        extracted_data=body.extracted,
-        supplier_name=body.supplier_name,
-        associated_sku=body.associated_sku,
-    )
+    try:
+        result = generate_supplier_gap_notice(
+            audit_result=body.audit_result,
+            extracted_data=body.extracted,
+            supplier_name=body.supplier_name,
+            associated_sku=body.associated_sku,
+        )
+    except ExtractionFailedError as e:
+        raise HTTPException(status_code=502, detail=e.reason) from e
 
     if not isinstance(result, dict):
         # "No gap notice required..." early-return case — nothing to persist.

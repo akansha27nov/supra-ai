@@ -8,6 +8,8 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from langsmith import traceable
 
+from agent.llm_reliability import ExtractionFailedError, invoke_with_retry
+
 from agent.schemas import (
     AuditResult,
     DocumentClassification,
@@ -86,9 +88,6 @@ def match_sku(covered_part_numbers: list[str], sku_catalog: dict[str, dict[str, 
     return None
 
 
-# ==========================================
-# 3. Graph Node Functions
-# ==========================================
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
 
@@ -125,7 +124,7 @@ Document:
 {state["raw_text"]}
 """
 
-    extracted = structured_llm.invoke(prompt)
+    extracted = invoke_with_retry(lambda: structured_llm.invoke(prompt), step="extract")
 
     return {
         "extracted": extracted.model_dump(),
@@ -147,7 +146,7 @@ def classify_doc_type_node(state: AuditState) -> dict[str, Any]:
         f"{snippet}"
     )
 
-    result = structured_llm.invoke(prompt)
+    result = invoke_with_retry(lambda: structured_llm.invoke(prompt), step="classify_doc_type")
 
     extracted = dict(state["extracted"])
 
@@ -219,7 +218,9 @@ def reconcile_node(state: AuditState) -> dict[str, Any]:
     )
 
     structured_llm = llm.with_structured_output(ExtractedCertificateData)
-    recalculated: ExtractedCertificateData = structured_llm.invoke(reconcile_prompt)
+    recalculated: ExtractedCertificateData = invoke_with_retry(
+        lambda: structured_llm.invoke(reconcile_prompt), step="reconcile"
+    )
 
     updated_data = recalculated.model_dump()
     for k, v in updated_data.items():
@@ -592,10 +593,11 @@ def route_after_validation(state: AuditState) -> Literal["resolve_sku", "reconci
     if state.get("doc_type") == "unknown":
         return "flag_for_human_review"
     
-    # Kept in sync with validate_fields_node's has_ambiguity — only "ambiguous" forces
-    ambiguous = any(s == "ambiguous" for s in state["field_status"].values())
+    # Kept in sync with reconcile_node / flag_for_human_review_node's definition of
+    # "unresolved" — both "absent_expected" and "ambiguous" require reconciliation.
+    unresolved = any(s in ("absent_expected", "ambiguous") for s in state["field_status"].values())
 
-    if not ambiguous:
+    if not unresolved:
         return "resolve_sku"
 
     if state["reconciliation_attempts"] < 2:
