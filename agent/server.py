@@ -233,11 +233,26 @@ async def submit_review_decision(
 async def create_gap_notice(body: GapNoticeRequest):
     """Generates a draft supplier gap-notice email from an existing audit result.
     A human reviewer edits/approves this before it's actually sent — this endpoint
-    only drafts it, it never sends anything itself."""
-    draft = generate_supplier_gap_notice(
+    only drafts it, it never sends anything itself.
+
+    generate_supplier_gap_notice() now returns a structured dict (StructuredGapNotice:
+    supplier_name, document_reference, failed_rules, evidence, corrective_action,
+    email_draft) rather than a plain string. The frontend's gap-notice textarea is bound
+    to a plain string field, so passing the dict straight through as `draft` renders
+    "[object Object]" instead of the email. Flatten it here: `draft` stays a string
+    (the editable email body, for backward compatibility with the existing textarea),
+    and the full structured notice is included separately for any UI that wants to show
+    the itemized failed_rules/evidence/corrective_action instead of just free text.
+    """
+    result = generate_supplier_gap_notice(
         audit_result=body.audit_result,
         extracted_data=body.extracted,
         supplier_name=body.supplier_name,
         associated_sku=body.associated_sku,
     )
-    return {"draft": draft}
+
+    if isinstance(result, dict):
+        return {"draft": result.get("email_draft", ""), "structured_notice": result}
+
+    # "No gap notice required..." early-return cases are still plain strings.
+    return {"draft": result, "structured_notice": None}

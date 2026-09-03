@@ -16,6 +16,22 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from agent.graph import graph
 
+# --- Catalog scope note (read this before "fixing" skus.json) ---
+# data/skus.json: 9 generic placeholder SKUs from Round 1 (e.g. "Over-Ear Wireless
+#   Headphones"), built for the synthetic cert_XX_*.pdf sample set in data/sample_pdfs.
+#   Those synthetic certs carry no product/model number at all (only a Certificate ID,
+#   supplier, lab, and lead ppm) — they were never meant to be matched by part number,
+#   so `covered_part_numbers` is intentionally empty here. Populating it against the
+#   real-world DoC/lab-report set is NOT a safe mechanical fix: several categories
+#   (headphones, speakers) have 2-3 competing real products with no principled way to
+#   pick one as "the" SKU, one (power bank) has a capacity mismatch suggesting a
+#   different product tier, and several real files (radio, soundbar, phone mount,
+#   smartphone, AC power supply, home energy hub) have no catalog entry at all. Forcing
+#   a match here would be a business decision, not a data-extraction one, and a wrong
+#   guess could mask a real compliance issue on whichever product didn't get picked.
+# data/real_skus.json: 5 SKUs purpose-built for the b2b real-world set (Envoy, ACH480,
+#   Concens, Apogee, UNOnext) — these DO have real part numbers populated and verified
+#   against match_sku(), since each has exactly one unambiguous real-world document.
 DEFAULT_SKU_CATALOG_PATH = Path(__file__).resolve().parent.parent / "data" / "skus.json"
 
 
@@ -45,10 +61,14 @@ def extract_raw_pdf_text(pdf_path):
     try:
         text = ""
         with pdfplumber.open(pdf_path) as pdf:
-            for page in pdf.pages:
+            for i, page in enumerate(pdf.pages):
                 page_text = page.extract_text()
                 if page_text:
-                    text += page_text + "\n"
+                    # Explicit page markers give the LLM a real signal for evidence_links'
+                    # page_number field. Without this, all pages get concatenated into one
+                    # blob and the model has to guess — confirmed wrong in testing (an item
+                    # on page 2 was reported as page 1, since nothing in the text said otherwise).
+                    text += f"[PAGE {i + 1}]\n{page_text}\n"
         return text
     except (PdfminerException, PDFSyntaxError) as e:
         print(f"Warning: Skipping invalid or corrupted PDF - {e}")
@@ -143,6 +163,35 @@ def audit_file(file_path: Path, sku_catalog: dict, associated_sku: str | None = 
     print("Audit Result:", result.get('audit_result'))
 
     return result
+
+
+def save_extracted_data_json(results: list, output_dir: Path = Path("logs")) -> Path:
+    """Persists the full extracted data (including covered_part_numbers) for every
+    audited file to disk. Previously this only ever went to stdout via `print(...)` in
+    audit_file() and was lost the moment the terminal closed — which is exactly why the
+    SKU catalog's missing covered_part_numbers field took 3 separate runs across 19 files
+    to properly diagnose. Run this after any batch to see exactly what was extracted.
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+    json_path = output_dir / f"extracted_data_{timestamp}.json"
+
+    payload = [
+        {
+            "file_name": res.get("file_name"),
+            "doc_type": res.get("doc_type"),
+            "associated_sku": res.get("associated_sku"),
+            "sku_match_status": res.get("sku_match_status"),
+            "extracted": res.get("extracted"),
+        }
+        for res in results
+    ]
+
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2, default=str)
+
+    print(f"[INFO] Extracted data JSON saved: {json_path.resolve()}")
+    return json_path
 
 
 def save_markdown_log(results: list, output_dir: Path = Path("logs")) -> Path:
@@ -311,4 +360,5 @@ if __name__ == "__main__":
 
     if all_results:
         save_markdown_log(all_results)
+        save_extracted_data_json(all_results)
         append_to_master_csv(all_results)
