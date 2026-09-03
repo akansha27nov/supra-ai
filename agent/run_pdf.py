@@ -236,6 +236,59 @@ def save_markdown_log(results: list, output_dir: Path = Path("logs")) -> Path:
     return output_path
 
 
+MASTER_LEDGER_FIELDNAMES = [
+    "RecordID",
+    "Timestamp",
+    "File Name",
+    "Supplier",
+    "Associated SKU",
+    "SKU Match Status",
+    "Decision",
+    "Score",
+    "Flags",
+    "FlagsDetail",
+    "ReviewStatus",
+    "Reviewer",
+]
+
+
+def _migrate_legacy_ledger_if_needed(csv_path: Path) -> None:
+    """Self-heals an existing master_audit_ledger.csv written before the
+    FlagsDetail column existed.
+
+    Without this, the first append after upgrading would write 12-value
+    rows underneath an 11-column header (the old file's header is only
+    rewritten once, at file-creation time) -- silently misaligning every
+    column from that row onward for anything that reads the CSV back
+    (pandas, csv.DictReader, etc). Detected once, in place: reads every
+    existing row, adds an empty FlagsDetail ("[]", since we don't have the
+    original structured violations to backfill), and rewrites the file
+    under the new header. Old rows end up with FlagsDetail=[] (visible as
+    no structured evidence) while their existing flat Flags text is
+    untouched -- a one-time, lossless-for-existing-data migration.
+    """
+    if not csv_path.exists():
+        return
+
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        fieldnames = reader.fieldnames or []
+        if "FlagsDetail" in fieldnames:
+            return  # already migrated
+        rows = list(reader)
+
+    for row in rows:
+        row["FlagsDetail"] = "[]"
+
+    with open(csv_path, mode="w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=MASTER_LEDGER_FIELDNAMES)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({k: row.get(k, "") for k in MASTER_LEDGER_FIELDNAMES})
+
+    print(f"[INFO] Migrated {len(rows)} legacy ledger row(s) to include FlagsDetail: {csv_path.resolve()}")
+
+
 def append_to_master_csv(results: list, output_dir: Path = Path("logs")) -> Path:
     """Append audit results to the master CSV ledger.
 
@@ -247,6 +300,8 @@ def append_to_master_csv(results: list, output_dir: Path = Path("logs")) -> Path
     output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = output_dir / "master_audit_ledger.csv"
 
+    _migrate_legacy_ledger_if_needed(csv_path)
+
     file_exists = csv_path.exists()
     current_time_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
@@ -254,19 +309,7 @@ def append_to_master_csv(results: list, output_dir: Path = Path("logs")) -> Path
         writer = csv.writer(f)
 
         if not file_exists:
-            writer.writerow([
-                "RecordID",
-                "Timestamp",
-                "File Name",
-                "Supplier",
-                "Associated SKU",
-                "SKU Match Status",
-                "Decision",
-                "Score",
-                "Flags",
-                "ReviewStatus",
-                "Reviewer",
-            ])
+            writer.writerow(MASTER_LEDGER_FIELDNAMES)
 
         for res in results:
             record_id = res.get("record_id") or str(uuid.uuid4())
@@ -301,6 +344,20 @@ def append_to_master_csv(results: list, output_dir: Path = Path("logs")) -> Path
 
             flags_str = " | ".join(flag_msgs) if flag_msgs else "None"
 
+            # Full structured violations (RuleViolation, including nested
+            # SourceEvidence: exact_quote/page_number/section) as a single
+            # JSON blob per row. `flags` entries may be plain dicts or
+            # Pydantic model instances depending on the caller, and a dict's
+            # own `evidence` value may itself be a Pydantic SourceEvidence --
+            # `default=` handles any of those transparently, at any nesting
+            # depth, without needing to special-case each shape by hand.
+            # flags_str above is kept unchanged for back-compat with any
+            # existing reader that expects a flat string.
+            flags_detail_json = json.dumps(
+                flags,
+                default=lambda o: o.model_dump() if hasattr(o, "model_dump") else str(o),
+            )
+
             writer.writerow([
                 record_id,
                 current_time_str,
@@ -311,6 +368,7 @@ def append_to_master_csv(results: list, output_dir: Path = Path("logs")) -> Path
                 decision,
                 score,
                 flags_str,
+                flags_detail_json,
                 "PENDING",
                 "",
             ])

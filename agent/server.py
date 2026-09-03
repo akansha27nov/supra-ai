@@ -1,10 +1,10 @@
 # agent/server.py
 from dotenv import load_dotenv
-
 load_dotenv()
 
 import shutil
 import uuid
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -210,6 +210,20 @@ async def get_audit_ledger():
     for record in records:
         notice = notices_by_audit_id.get(str(record.get("RecordID", "")))
         record["GapNoticeStatus"] = notice.get("status") if notice else ""
+
+        # Parse the FlagsDetail JSON blob (added alongside the existing flat
+        # Flags string) back into real structured data -- the full
+        # RuleViolation list including nested SourceEvidence (exact_quote/
+        # page_number/section). Ledger rows written before this column
+        # existed won't have the key at all (pandas simply omits a column
+        # that never appeared in the CSV header), and rows written after but
+        # with no flags will have an empty string cell -- both should
+        # surface as an empty list rather than an error.
+        raw_detail = record.get("FlagsDetail", "")
+        try:
+            record["FlagsDetail"] = json.loads(raw_detail) if raw_detail else []
+        except (json.JSONDecodeError, TypeError):
+            record["FlagsDetail"] = []
 
     return records
 

@@ -219,6 +219,21 @@ class GapNoticeStatus(str, Enum):
     APPROVED_FOR_SENDING = "APPROVED_FOR_SENDING"
     SENT = "SENT"
 
+class GapNoticeEvidenceEntry(BaseModel):
+    """One structured piece of evidence backing a failed rule cited in a gap notice.
+
+    Replaces the previous flat `list[str]` design, which discarded the
+    page_number/section linkage that RuleViolation.evidence (SourceEvidence)
+    already carries -- the LLM's evidence summary was collapsed down to bare
+    quote strings before ever reaching the persisted record. This preserves
+    the real rule-engine evidence rather than the LLM's paraphrase of it.
+    """
+    rule_code: str = Field(..., description="Machine-readable violation code this evidence supports.")
+    exact_quote: str | None = Field(default=None, description="Exact verbatim text span/quote from the source document, if available.")
+    page_number: int | None = Field(default=None, description="Page number where the evidence is found, if available.")
+    section: str | None = Field(default=None, description="Document section or context heading, if available.")
+
+
 class GapNoticeRecord(BaseModel):
     """Persisted record representing the lifecycle of a supplier gap notice."""
     notice_id: str = Field(..., description="Unique identifier for the gap notice record.")
@@ -228,7 +243,10 @@ class GapNoticeRecord(BaseModel):
     
     # Structured components (can be edited independently or via email text override)
     failed_rules: list[str] = Field(default_factory=list)
-    evidence: list[str] = Field(default_factory=list)
+    evidence: list[GapNoticeEvidenceEntry] = Field(
+        default_factory=list,
+        description="Structured evidence (rule code, quote, page, section) sourced from the rule engine's own RuleViolation.evidence, not the LLM's prose.",
+    )
     corrective_action: str | None = Field(default=None)
     
     # Final email text (allows human editing prior to dispatch)

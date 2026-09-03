@@ -83,5 +83,28 @@
     "updated_at": "2026-09-03T07:48:53.390279+00:00",
     "approved_by": "Lead Auditor",
     "approved_at": "2026-09-03T07:48:52.075460+00:00"
+  },
+  "4178b7f7-c2ba-4034-9b56-6422f57d9b59": {
+    "notice_id": "4178b7f7-c2ba-4034-9b56-6422f57d9b59",
+    "audit_id": "8d07b1ab-4aed-4ca7-8933-f615fe72278a",
+    "supplier_name": "B&W Group Ltd",
+    "status": "SENT",
+    "failed_rules": [
+      "NO_SKU_MATCH"
+    ],
+    "evidence": [
+      {
+        "rule_code": "NO_SKU_MATCH",
+        "exact_quote": "Type designation(s): Px7 S3",
+        "page_number": 1,
+        "section": "Declaration of Conformity"
+      }
+    ],
+    "corrective_action": "Please provide updated documentation that includes the correct SKU matching the extracted part numbers.",
+    "editable_email_draft": "Subject: Request for Updated Documentation\n\nDear B&W Group Ltd,\n\nI hope this message finds you well. \n\nWe have recently reviewed the documentation related to the Px7 S3 product and identified a compliance gap regarding the SKU matching. Specifically, the extracted part numbers did not match any catalog SKU, as indicated by the type designation(s): Px7 S3.\n\nTo resolve this issue, we kindly request that you provide updated documentation that includes the correct SKU matching the extracted part numbers.\n\nThank you for your attention to this matter. We appreciate your prompt response.\n\nBest regards,\n\nAkansha Verma\nLead Auditor \n",
+    "created_at": "2026-09-03T08:38:41.477703+00:00",
+    "updated_at": "2026-09-03T08:45:47.024135+00:00",
+    "approved_by": "Lead Auditor",
+    "approved_at": "2026-09-03T08:45:46.057389+00:00"
   }
 }

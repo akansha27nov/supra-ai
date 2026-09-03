@@ -55,15 +55,39 @@ def generate_supplier_gap_notice(
         return "No gap notice required; no actionable violations were found."
 
     issues_info = []
+    evidence_detail: list[dict[str, Any]] = []
     for flag in actionable_flags:
         issue_text = f"- Rule: {flag.get('code')}\n  Message: {flag.get('message')}"
-        
-        # Include evidence context if present from the rule engine output
+
+        # Include evidence context if present from the rule engine output.
+        # This is fed into the LLM prompt as plain text (issue_text below) so
+        # it can write natural prose in the email draft -- but the exact
+        # quote/page_number/section is ALSO captured separately here,
+        # untouched by the LLM, so the persisted GapNoticeRecord can carry
+        # real structured evidence instead of the LLM's paraphrase of it.
         evidence = flag.get("evidence")
+        quote = None
+        page_number = None
+        section = None
         if evidence:
-            quote = evidence.get("exact_quote", "No exact quote") if isinstance(evidence, dict) else getattr(evidence, "exact_quote", "No exact quote")
-            issue_text += f"\n  Evidence: {quote}"
-            
+            if isinstance(evidence, dict):
+                quote = evidence.get("exact_quote")
+                page_number = evidence.get("page_number")
+                section = evidence.get("section")
+            else:
+                quote = getattr(evidence, "exact_quote", None)
+                page_number = getattr(evidence, "page_number", None)
+                section = getattr(evidence, "section", None)
+            if quote:
+                issue_text += f"\n  Evidence: {quote}"
+
+        evidence_detail.append({
+            "rule_code": flag.get("code"),
+            "exact_quote": quote,
+            "page_number": page_number,
+            "section": section,
+        })
+
         issues_info.append(issue_text)
 
     issues_list = "\n\n".join(issues_info)
@@ -106,7 +130,13 @@ def generate_supplier_gap_notice(
         "issues_list": issues_list,
     })
 
-    return response.model_dump()
+    result = response.model_dump()
+    # Structured evidence sourced directly from the rule engine's own flags
+    # (evidence_detail, built above), separate from `result["evidence"]`
+    # which is the LLM's own free-text list used only for prompt/prose
+    # purposes. create_gap_notice_record() persists evidence_detail.
+    result["evidence_detail"] = evidence_detail
+    return result
 
 @traceable(name="create_gap_notice_record", run_type="chain")
 def create_gap_notice_record(
@@ -114,14 +144,23 @@ def create_gap_notice_record(
     supplier_name: str,
     structured_notice: dict
 ) -> dict[str, Any]:
-    """Initializes a persisted gap notice record in 'DRAFT' status from generated output."""
+    """Initializes a persisted gap notice record in 'DRAFT' status from generated output.
+
+    `evidence` is populated from structured_notice["evidence_detail"] (the
+    rule engine's own RuleViolation.evidence, threaded through by
+    generate_supplier_gap_notice) rather than structured_notice["evidence"]
+    (the LLM's free-text paraphrase), so the persisted record's evidence
+    field carries real page/quote/section linkage. Falls back to an empty
+    list for any caller that doesn't supply evidence_detail (e.g. a manually
+    constructed structured_notice dict in a test or script).
+    """
     record = GapNoticeRecord(
         notice_id=str(uuid.uuid4()),
         audit_id=audit_id,
         supplier_name=supplier_name,
         status=GapNoticeStatus.DRAFT,
         failed_rules=structured_notice.get("failed_rules", []),
-        evidence=structured_notice.get("evidence", []),
+        evidence=structured_notice.get("evidence_detail", []),
         corrective_action=structured_notice.get("corrective_action"),
         editable_email_draft=structured_notice.get("email_draft", ""),
     )

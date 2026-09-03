@@ -4,6 +4,22 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL}/api` 
   : "http://localhost:8000/api";
 
+// Mirrors agent/schemas.py::SourceEvidence.
+export interface SourceEvidence {
+  field_name: string;
+  exact_quote: string;
+  page_number: number | null;
+  section: string | null;
+}
+
+// Mirrors agent/schemas.py::RuleViolation.
+export interface RuleViolationDetail {
+  code: string;
+  severity_score: number;
+  message: string;
+  evidence: SourceEvidence | null;
+}
+
 export interface AuditLog {
   RecordID: string;
   Timestamp: string;
@@ -14,6 +30,12 @@ export interface AuditLog {
   Decision: string;
   Score: number;
   Flags: string;
+  // Structured counterpart to Flags: the full RuleViolation list (including
+  // nested SourceEvidence) parsed server-side from the ledger's FlagsDetail
+  // JSON column. Empty array for rows written before this column existed,
+  // or rows with no flags. Flags (the flat string) is kept as-is for
+  // anywhere that only needs the summary text.
+  FlagsDetail?: RuleViolationDetail[];
   ReviewStatus?: string;
   Reviewer?: string;
   // Joined in at read time from the gap-notice store (see server.py
@@ -72,13 +94,23 @@ export async function submitReviewDecision(
 // Mirrors agent/schemas.py::GapNoticeStatus / GapNoticeRecord.
 export type GapNoticeStatus = "DRAFT" | "EDITED" | "APPROVED_FOR_SENDING" | "SENT";
 
+// Mirrors agent/schemas.py::GapNoticeEvidenceEntry.
+export interface GapNoticeEvidenceEntry {
+  rule_code: string;
+  exact_quote: string | null;
+  page_number: number | null;
+  section: string | null;
+}
+
 export interface GapNoticeRecord {
   notice_id: string;
   audit_id: string;
   supplier_name: string;
   status: GapNoticeStatus;
   failed_rules: string[];
-  evidence: string[];
+  // Structured evidence sourced from the rule engine's own RuleViolation.evidence
+  // (not the LLM's prose) -- see agent/gap_notice.py's evidence_detail handling.
+  evidence: GapNoticeEvidenceEntry[];
   corrective_action: string | null;
   editable_email_draft: string;
   created_at: string;
