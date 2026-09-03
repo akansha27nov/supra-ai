@@ -3,16 +3,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import shutil
-import uuid
-import json
 from pathlib import Path
 
-import pandas as pd
 import pdfplumber
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from agent import db
 from agent.gap_notice import (
     approve_gap_notice_for_sending,
     create_gap_notice_record,
@@ -27,7 +25,7 @@ from agent.gap_notice_store import (
     save_record,
 )
 from agent.graph import graph
-from agent.run_pdf import append_to_master_csv, load_sku_catalog
+from agent.run_pdf import load_sku_catalog
 from agent.schemas import ApproveGapNoticeRequest, GapNoticeStatus, UpdateGapNoticeRequest
 from agent.telegram_dispatch import (
     TelegramNotConfigured,
@@ -49,46 +47,15 @@ app.add_middleware(
 UPLOAD_DIR = Path("data/uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-LOG_DIR = Path("logs")
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-
 # Load SKU catalog once at startup — the graph passes it through in state
 # so the audit result carries sku context into the ledger.
 SKU_CATALOG = load_sku_catalog(Path("data/skus.json"))
 print(f"[startup] Loaded {len(SKU_CATALOG)} SKUs from data/skus.json")
 
-
-def _migrate_ledger_columns() -> None:
-    """One-time migration for rows written before RecordID/ReviewStatus/Reviewer existed."""
-    csv_path = LOG_DIR / "master_audit_ledger.csv"
-    if not csv_path.exists():
-        return
-
-    df = pd.read_csv(csv_path, keep_default_na=False)
-    changed = False
-
-    if "RecordID" not in df.columns:
-        df.insert(0, "RecordID", [str(uuid.uuid4()) for _ in range(len(df))])
-        changed = True
-    if "Supplier" not in df.columns:
-        # Backfilling real supplier names for historic rows would need re-parsing the
-        # source PDFs, which we don't have handles to here — mark them explicitly
-        # rather than silently leaving a blank cell.
-        df["Supplier"] = "Unknown Supplier"
-        changed = True
-    if "ReviewStatus" not in df.columns:
-        df["ReviewStatus"] = "PENDING"
-        changed = True
-    if "Reviewer" not in df.columns:
-        df["Reviewer"] = ""
-        changed = True
-
-    if changed:
-        df.to_csv(csv_path, index=False)
-        print(f"[startup] Migrated {csv_path} to include RecordID/Supplier/ReviewStatus")
-
-
-_migrate_ledger_columns()
+# Creates audit_ledger + gap_notices tables in Postgres if they don't exist yet.
+# Requires DATABASE_URL to be set (Render injects this automatically once a
+# Postgres instance is linked to this service).
+db.init_db()
 
 
 class ReviewDecisionRequest(BaseModel):
@@ -148,14 +115,15 @@ async def audit_uploaded_pdf(file: UploadFile = File(...)):   # noqa: B008
     )
 
     # Defensive passthrough fields — graph nodes may not set these,
-    # but append_to_master_csv reads them from the result dict.
+    # but insert_audit_records reads them from the result dict.
     result.setdefault("file_name", file.filename)
     result.setdefault("associated_sku", None)
     result.setdefault("sku_match_status", "not_attempted")
 
-    # Persist this audit to the master CSV ledger so the dashboard
-    # "Recent Document Submissions" table picks it up on next loadLogs().
-    append_to_master_csv([result], output_dir=LOG_DIR)
+    # Persist this audit to Postgres so the dashboard "Recent Document
+    # Submissions" table picks it up on next loadLogs(), and so it
+    # survives a Render restart/redeploy (the old CSV did not).
+    db.insert_audit_records([result])
 
     return {
         "record_id": result.get("record_id"),
@@ -172,29 +140,16 @@ async def audit_uploaded_pdf(file: UploadFile = File(...)):   # noqa: B008
 
 @app.get("/api/logs")
 async def get_audit_ledger():
-    """Returns past audit logs from the master CSV ledger.
-    Normalizes column names so the frontend always receives `SKU` (not
-    `Associated SKU`), keeping the AuditLog interface stable.
+    """Returns past audit logs from Postgres.
 
     Also joins in each row's gap-notice lifecycle status (AC-17 #6) by
     looking it up in the gap-notice store keyed by RecordID == audit_id, at
-    read time rather than writing it into the CSV. The ledger is written once
-    at audit time by append_to_master_csv(), before any gap notice can exist,
-    so a written-in status column would immediately go stale the moment a
-    reviewer edited/approved/sent the notice; a live lookup can't drift out
-    of sync with the gap-notice store the way a duplicated column could."""
-    csv_path = LOG_DIR / "master_audit_ledger.csv"
-    if not csv_path.exists():
-        return []
-
-    df = pd.read_csv(csv_path, keep_default_na=False)
-    df = df.fillna("")
-
-    # Normalize column name for the frontend
-    if "Associated SKU" in df.columns and "SKU" not in df.columns:
-        df = df.rename(columns={"Associated SKU": "SKU"})
-
-    records = df.to_dict(orient="records")
+    read time rather than writing it into the ledger row itself — the ledger
+    row is written once at audit time, before any gap notice can exist, so
+    a written-in status column would go stale the moment a reviewer
+    edited/approved/sent the notice.
+    """
+    records = db.fetch_audit_ledger()
 
     # Join in gap-notice status per record, when one exists. list_records()
     # once + an in-memory index avoids one store read per ledger row.
@@ -210,20 +165,6 @@ async def get_audit_ledger():
     for record in records:
         notice = notices_by_audit_id.get(str(record.get("RecordID", "")))
         record["GapNoticeStatus"] = notice.get("status") if notice else ""
-
-        # Parse the FlagsDetail JSON blob (added alongside the existing flat
-        # Flags string) back into real structured data -- the full
-        # RuleViolation list including nested SourceEvidence (exact_quote/
-        # page_number/section). Ledger rows written before this column
-        # existed won't have the key at all (pandas simply omits a column
-        # that never appeared in the CSV header), and rows written after but
-        # with no flags will have an empty string cell -- both should
-        # surface as an empty list rather than an error.
-        raw_detail = record.get("FlagsDetail", "")
-        try:
-            record["FlagsDetail"] = json.loads(raw_detail) if raw_detail else []
-        except (json.JSONDecodeError, TypeError):
-            record["FlagsDetail"] = []
 
     return records
 
@@ -242,43 +183,13 @@ async def submit_review_decision(
             detail="decision must be APPROVED or REJECTED",
         )
 
-    csv_path = LOG_DIR / "master_audit_ledger.csv"
+    updated = db.update_review_status(record_id, decision, body.reviewer)
 
-    if not csv_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="No audit ledger found.",
-        )
-
-    df = pd.read_csv(csv_path, keep_default_na=False)
-
-    required_columns = {"RecordID", "ReviewStatus"}
-    missing = required_columns - set(df.columns)
-
-    if missing:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Ledger missing columns: {', '.join(sorted(missing))}",
-        )
-
-    match = df["RecordID"].astype(str) == str(record_id)
-
-    if not match.any():
+    if not updated:
         raise HTTPException(
             status_code=404,
             detail=f"No audit record found with id {record_id}",
         )
-
-    df.loc[match, "ReviewStatus"] = decision
-
-    # Add Reviewer column to older ledgers without breaking migration.
-    if "Reviewer" not in df.columns:
-        df["Reviewer"] = ""
-
-    if body.reviewer:
-        df.loc[match, "Reviewer"] = body.reviewer.strip()
-
-    df.to_csv(csv_path, index=False)
 
     return {
         "record_id": record_id,
@@ -291,16 +202,10 @@ async def submit_review_decision(
 async def create_gap_notice(body: GapNoticeRequest):
     """Creates (or returns the existing) persisted gap-notice record for an audit.
 
-    Previously this endpoint only ever called the LLM and handed back a
-    throwaway draft — nothing was written down anywhere. Reopening the modal
-    for the same audit regenerated a brand-new draft every time, edits made
-    in the browser vanished on refresh, and there was no way to ask "does a
-    gap notice already exist for this audit?" (AC-17 #1, #5).
-
-    This is now idempotent per audit_id: if a record already exists it's
-    returned as-is — including whatever edits or approval state a reviewer
-    already made — and a fresh one is only generated and persisted the first
-    time this audit is seen.
+    Idempotent per audit_id: if a record already exists it's returned as-is
+    — including whatever edits or approval state a reviewer already made —
+    and a fresh one is only generated and persisted the first time this
+    audit is seen.
     """
     existing = get_record_by_audit_id(body.audit_id)
     if existing:
@@ -329,8 +234,8 @@ async def create_gap_notice(body: GapNoticeRequest):
 @app.get("/api/gap-notice/by-audit/{audit_id}")
 async def get_gap_notice_by_audit(audit_id: str):
     """Lets the UI check "does a gap notice already exist for this audit?"
-    before generating a fresh one (AC-17 #5). Placed before the /{notice_id}
-    route below so "by-audit" isn't swallowed as a literal notice_id."""
+    before generating a fresh one. Placed before the /{notice_id} route
+    below so "by-audit" isn't swallowed as a literal notice_id."""
     record = get_record_by_audit_id(audit_id)
     if not record:
         raise HTTPException(
@@ -341,8 +246,7 @@ async def get_gap_notice_by_audit(audit_id: str):
 
 @app.get("/api/gap-notice/{notice_id}")
 async def get_gap_notice(notice_id: str):
-    """Retrieval by notice_id (AC-17 #2 — previously nothing implemented this,
-    even though notice_id was generated on every record)."""
+    """Retrieval by notice_id."""
     record = get_record(notice_id)
     if not record:
         raise HTTPException(
@@ -353,9 +257,7 @@ async def get_gap_notice(notice_id: str):
 
 @app.patch("/api/gap-notice/{notice_id}")
 async def edit_gap_notice(notice_id: str, body: UpdateGapNoticeRequest):
-    """Persists a reviewer's edits to the draft and moves status -> EDITED
-    (AC-17 #3). Previously update_gap_notice_draft() was never called from a
-    route, so edits only ever lived in React state and vanished on refresh."""
+    """Persists a reviewer's edits to the draft and moves status -> EDITED."""
     record = get_record(notice_id)
     if not record:
         raise HTTPException(
@@ -370,9 +272,7 @@ async def edit_gap_notice(notice_id: str, body: UpdateGapNoticeRequest):
 @app.post("/api/gap-notice/{notice_id}/approve")
 async def approve_gap_notice(notice_id: str, body: ApproveGapNoticeRequest):
     """Records that a compliance officer signed off on the current version
-    and moves status -> APPROVED_FOR_SENDING (AC-17 #4). Previously
-    approve_gap_notice_for_sending() was never called from a route, so this
-    lifecycle state was unreachable from the running system."""
+    and moves status -> APPROVED_FOR_SENDING."""
     record = get_record(notice_id)
     if not record:
         raise HTTPException(
@@ -386,22 +286,14 @@ async def approve_gap_notice(notice_id: str, body: ApproveGapNoticeRequest):
 
 @app.post("/api/gap-notice/{notice_id}/send")
 async def send_gap_notice_endpoint(notice_id: str):
-    """Moves status -> SENT (AC-17 #7 — SENT was defined in the enum but had
-    no transition that could reach it). Requires APPROVED_FOR_SENDING first.
+    """Moves status -> SENT. Requires APPROVED_FOR_SENDING first.
 
-    IMPORTANT: `dispatch_status` here refers to *supplier* delivery, and
-    stays "simulated" — there is still no real email/SMTP/SendGrid
-    integration wired up anywhere in this codebase (AC-17 #8, left as an
-    explicit, separate, lower-priority gap).
+    `dispatch_status` refers to *supplier* delivery and stays "simulated" —
+    there is still no real email/SMTP/SendGrid integration wired up.
 
-    Separately, if TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID are configured
-    (same Bot API pattern as the Round 1 n8n POC's "Telegram High-Risk
-    Alert" node), a best-effort internal notification is posted to that
-    chat confirming the notice was marked SENT — `telegram_notification`
-    in the response reports whether that succeeded. This is a team-visibility
-    alert only, not a supplier-facing send, and its failure never blocks or
-    rolls back the SENT transition above, which is already persisted by the
-    time it's attempted.
+    If TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID are configured, a best-effort
+    internal notification is posted confirming the notice was marked SENT —
+    its failure never blocks or rolls back the SENT transition above.
     """
     record = get_record(notice_id)
     if not record:
