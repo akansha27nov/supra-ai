@@ -39,6 +39,7 @@ The deployment should achieve five objectives:
 - Make compliance screening more consistent and auditable.
 - Preserve human accountability for final compliance decisions.
 - Establish whether the workflow provides measurable operational value.
+- Reviewer-facing audit Copilot for evidence-grounded investigation of findings.
 
 The initial scope should remain deliberately narrow:
 
@@ -66,6 +67,8 @@ The documented use case explicitly positions Supra AI as an improvement to the m
 Supra AI should assist reviewers rather than replace them.
 
 The system must not make legally binding compliance decisions, automatically approve products for sale, or use AI output as the sole basis for final compliance, supplier-approval or product-release decisions.
+
+The audit Copilot supports investigation and interpretation of existing audit findings but does not replace the deterministic policy layer or make the final compliance decision.
 
 ### Evidence-first outputs
 
@@ -119,6 +122,7 @@ Demonstrate that the documented end-to-end screening workflow operates reliably 
 - Human review.
 - Lightweight reviewer interface.
 - Benchmark and observability pipeline.
+- Audit-scoped reviewer Copilot for investigation of findings and supporting evidence.
 
 ### Key activities
 
@@ -131,6 +135,10 @@ Demonstrate that the documented end-to-end screening workflow operates reliably 
 - Validate evidence-linked findings.
 - Validate Gap Notice generation for flagged or rejected cases.
 - Measure extraction and rule-screening performance.
+- Validate Audit Copilot against representative audit findings and evidence.
+- Validate that Copilot responses remain scoped to the selected audit.
+- Validate that Copilot does not override deterministic screening results.
+- Validate that insufficient or missing evidence is explicitly communicated.
 
 ### Exit criteria
 
@@ -143,6 +151,9 @@ The MVP should be considered ready for controlled customer validation when:
 - Findings can be traced to supporting evidence.
 - Human reviewers can understand the result.
 - The expanded benchmark is retained as a regression baseline.
+- Reviewers can use Copilot to understand and investigate findings.
+- Copilot responses remain grounded in the selected audit and available evidence.
+- Copilot does not modify deterministic screening outcomes.
 
 The current repository provides a strong validation signal: the current benchmark reports 13/13 expected audit decisions and 95.9% overall extraction accuracy, including 100% for laboratory-test-report extraction and 93.5% for manufacturer self-declarations. However, `standards_tested` is currently 75%, so field-level performance is not uniformly above the 90% target. The benchmark therefore supports feasibility but does not establish production reliability.
 
@@ -183,6 +194,10 @@ The repository's Round-2 rollout plan describes an approximately eight-week impl
 - Measure the quality of generated Gap Notices.
 - Monitor actual processing cost.
 - Document operational issues and required controls.
+- Evaluate reviewer use of Audit Copilot during investigation of flagged and ambiguous cases.
+- Measure whether Copilot reduces time spent understanding audit findings.
+- Record Copilot responses requiring reviewer correction or clarification.
+- Evaluate reviewer trust, usefulness and adoption of Copilot.
 
 ### Pilot workstreams
 
@@ -196,6 +211,7 @@ The repository's Round-2 rollout plan describes an approximately eight-week impl
 | Gap Notice | Produce notices from actual findings | Correct supplier, failed rules and corrective action |
 | Observability | Record workflow execution and evaluation data | Traceable workflow runs |
 | Economics | Establish operational value | Measured time saved and cost per document |
+| Audit Copilot | Support investigation of findings and evidence | Reviewer adoption, usefulness, response quality and correction rate |
 
 ### Pilot exit criteria
 
@@ -211,6 +227,9 @@ Production deployment should only be considered when the pilot demonstrates, aga
 - Human-review responsibilities are clearly defined.
 - Security, retention and access requirements have been agreed.
 - The measured business case supports continued deployment.
+- Reviewers can use Copilot effectively without weakening human oversight.
+- Copilot responses are sufficiently grounded in audit evidence.
+- Copilot does not introduce unacceptable unsupported conclusions.
 
 The pilot should not be considered successful solely because extraction accuracy is high. The business case depends primarily on whether reviewer effort is actually reduced while evidence quality and human oversight are preserved.
 
@@ -238,6 +257,7 @@ The production environment should support:
 - Gap Notice generation where applicable.
 - Audit/history records.
 - Monitoring and regression evaluation.
+- Audit-scoped reviewer Copilot for investigating findings and supporting evidence.
 
 ### Production operating model
 
@@ -536,6 +556,10 @@ The KPIs should distinguish **technical performance**, **workflow value** and **
 | Backlog reduction | Reduction in overdue/unreviewed documentation | Measure against baseline |
 | Human override rate | Frequency of reviewer disagreement/correction | Measure and investigate |
 | Supplier response time | Time to receive acceptable replacement documentation | Measure where workflow supports it |
+| Copilot adoption | Percentage of eligible audits/reviews where Copilot is used | Measure during pilot |
+| Copilot usefulness | Reviewer-rated usefulness of Copilot responses | Measure during pilot |
+| Copilot correction rate | Percentage of Copilot responses requiring material reviewer correction | Measure and investigate |
+| Copilot-assisted review time | Review/investigation time with Copilot versus baseline | Measure during pilot |
 
 ## Business KPIs
 
@@ -611,6 +635,7 @@ The current project scope focuses on:
 - Human review.
 - Gap Notice generation.
 - Reviewer interface.
+- Audit Copilot for investigation of findings and supporting evidence.
 - Benchmarking and observability.
 
 ## Production hardening

@@ -67,8 +67,9 @@ A compliance user uploads or submits supplier documentation. The system then:
 8. Assigns a review priority based on the screening result.
 9. Shows supporting evidence from the source document.
 10. Routes flagged or ambiguous cases to a human reviewer.
-11. Generates a structured Supplier Gap Notice for applicable flagged or rejected screening outcomes.
-12. Keeps the final compliance decision with a human reviewer.
+11. Provides an audit-scoped Copilot Chat that allows the reviewer to investigate findings, understand supporting evidence, and ask questions about the selected audit.
+12. Generates a structured Supplier Gap Notice for applicable flagged or rejected screening outcomes.
+13. Keeps the final compliance decision with a human reviewer.
 
 ### Example
 
@@ -148,6 +149,29 @@ The **primary MVP user is the compliance professional**. Procurement, product ma
 
 The MVP focuses on improving the **document-screening and review portion** of this process rather than attempting to replace the entire supplier-management lifecycle.
 
+### Audit Review with Copilot
+
+After the automated screening workflow produces findings, the compliance reviewer can use **Audit Copilot Chat** within the context of the selected audit.
+
+The reviewer can ask questions about:
+
+- why a finding was triggered,
+- which evidence supports the finding,
+- what information was extracted from the source document,
+- which deterministic rule produced the result,
+- what information is missing or ambiguous,
+- and what should be verified during human review.
+
+The Copilot is **audit-scoped** and acts as an investigation and explanation layer over the existing screening results. It does not replace the deterministic rule engine and does not modify the underlying audit result.
+
+The reviewer remains responsible for interpreting the evidence and making the final compliance decision.
+
+The resulting workflow is:
+
+**Supplier document → Supra AI → Classification → Extraction → SKU/MPN resolution → Rule validation → Findings → Evidence review → Audit Copilot investigation → Human decision → Optional Supplier Gap Notice**
+
+The Copilot therefore supports the existing human-review stage rather than creating a separate compliance decision process.
+
 ---
 
 ## 7. Success Criteria
@@ -206,6 +230,7 @@ The MVP should support:
 - Review-priority / risk indication
 - Evidence-linked findings
 - Human-review routing
+- Audit-scoped Copilot Chat for investigation and explanation of audit findings and supporting evidence
 - Supplier Gap Notice generation for applicable flagged/rejected cases
 - Structured screening results suitable for review and downstream reporting
 
@@ -251,6 +276,7 @@ The MVP will **not**:
 - Provide legal advice.
 - Use AI output as the sole basis for final compliance, supplier-approval, or product-release decisions.
 - Automatically communicate a regulatory decision to a supplier without the required human review and approval.
+- Use Copilot Chat as an autonomous compliance decision-maker or as a mechanism for overriding deterministic screening results.
 
 Supplier Gap Notices are intended to support **document remediation and follow-up**. They do not constitute legal or regulatory determinations.
 
@@ -294,7 +320,7 @@ A compliance professional reviews:
 - unresolved or ambiguous information,
 - and the resulting screening status.
 
-The reviewer remains responsible for the final compliance decision.
+The reviewer remains responsible for the final compliance decision. The Audit Copilot supports this review by explaining existing findings and evidence, but its responses are advisory and do not override deterministic screening results or transfer final decision-making responsibility from the reviewer.
 
 ---
 

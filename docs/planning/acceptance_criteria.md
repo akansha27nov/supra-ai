@@ -115,7 +115,57 @@ Extraction accuracy and rule-engine accuracy must be evaluated separately.
 **When** the LangGraph pipeline completes  
 **Then** the run is observable as a trace containing the relevant graph execution path and extraction/reconciliation activity.
 
-## 9. Benchmark Threshold
+## 9. Audit Copilot Chat
+
+### AC-19 — Copilot availability
+
+**Given** a reviewer is viewing an audit
+**When** the audit review interface loads
+**Then** the Audit Copilot is available within the audit review context.
+
+### AC-20 — Audit-scoped context
+
+**Given** a reviewer has selected an audit
+**When** the reviewer sends a message to Copilot
+**Then** Copilot receives and uses the context of the selected audit.
+
+### AC-21 — Finding investigation
+
+**Given** an audit contains one or more findings
+**When** the reviewer asks Copilot about a finding
+**Then** Copilot can explain the finding using the available audit data.
+
+### AC-22 — Evidence explanation
+
+**Given** a finding has supporting evidence
+**When** the reviewer asks why the finding was triggered
+**Then** Copilot identifies and explains the relevant evidence and rule result.
+
+### AC-23 — No modification of audit results
+
+**Given** an audit contains an existing deterministic rule result
+**When** the reviewer interacts with Copilot
+**Then** Copilot does not modify, override, or recalculate the audit result.
+
+### AC-24 — Audit isolation
+
+**Given** a reviewer is working within a selected audit
+**When** the reviewer asks Copilot a question
+**Then** Copilot does not expose information belonging to unrelated audits.
+
+### AC-25 — Uncertainty and missing evidence
+
+**Given** the available audit evidence is insufficient to answer a question
+**When** the reviewer asks Copilot
+**Then** Copilot explicitly states that the available evidence is insufficient and does not fabricate information.
+
+### AC-26 — Human-in-the-loop
+
+**Given** Copilot provides an explanation or recommendation
+**When** the reviewer evaluates the audit
+**Then** the reviewer remains responsible for the final compliance decision.
+
+## 10. Benchmark Threshold
 
 For the Round 2 MVP, the target is **>=90% extraction accuracy against manually established ground truth** on the expanded real-world test set, with explicit reporting by field and document type.
 

@@ -92,6 +92,20 @@ The next iteration expands the current proof of concept from synthetic certifica
 - The notice must use the actual rule-engine findings rather than inventing failures.
 - The reviewer can inspect/edit the notice before sending it.
 
+### US-3.3 — Audit Copilot Chat
+
+> **As a Compliance Reviewer, I want to ask questions about a specific audit and its findings, so that I can understand the evidence and investigate compliance issues without manually navigating across documents and results.**
+
+**Acceptance criteria**
+
+* Given a selected audit, the reviewer can open Copilot Chat in the context of that audit.
+* The Copilot can answer questions using the selected audit's findings and available evidence.
+* Given a selected finding, the Copilot can explain the finding and identify the relevant evidence.
+* The Copilot does not change or override the deterministic rule-engine result.
+* When the available audit evidence is insufficient, the Copilot explicitly states that the evidence is insufficient.
+* The Copilot does not use information from unrelated audits.
+* The reviewer remains responsible for the final compliance decision.
+
 ## 6. Epic 4 — User Interface and Reporting
 
 ### US-4.1 — Upload and inspect a document

@@ -31,6 +31,7 @@ A reviewer uploads a supplier compliance PDF (Declaration of Conformity or lab t
 4. Persists the result to the Postgres audit ledger, with structured evidence (exact quote, page, section) carried through.
 5. Lets a human reviewer approve/reject, and — for `FLAGGED`/`REJECTED` documents — generate, edit, approve, and send a supplier gap notice, with the full lifecycle persisted and status-tracked.
 6. Sends a best-effort internal Telegram notification when a gap notice is marked sent.
+7. Provides an audit-scoped Copilot Chat that helps reviewers investigate findings, understand supporting evidence, and navigate the audit without changing the underlying compliance decision.
 
 The core AI capability (extraction + rule-based screening) runs end to end against real PDFs, not synthetic mocks. Latest benchmark: 13/13 audit decisions agreeing with labelled ground truth, 95.9% overall extraction accuracy (see `strategic_plan.md`).
 
@@ -56,9 +57,9 @@ The core AI capability (extraction + rule-based screening) runs end to end again
                  |  deterministic audit state machine  |
                  +-------------------+-----------------+
                                      |
-        +-----------------------------+-----------------------------+
-        |                             |                             |
-        v                             v                             v
+        +----------------------------+-----------------------------+
+        |                            |                             |
+        v                            v                             v
 +-------------------+   +---------------------------+    +--------------------------+
 | extract_node      |   | validate_fields_node       |   | resolve_sku_node         |
 | LLM field         |-->| absent/ambiguous check     |-->| match product against    |
@@ -98,6 +99,17 @@ The core AI capability (extraction + rule-based screening) runs end to end again
                     |   (/api/gap-notice*)                 |
                     | - Telegram alert on notice sent      |
                     | - LangSmith trace of every run       |
+                    +------------------+-------------------+
+                                       |
+                                       v
+                    +--------------------------------------+
+                    | Audit Copilot Chat                   |
+                    | (agent/copilot.py)                   |
+                    | POST /api/logs/{id}/chat             |
+                    | reads audit_ledger + gap_notices;    |
+                    | reuses graph.py's LLM client;        |
+                    | grounded, audit-scoped, read-only —  |
+                    | never writes back to the ledger      |
                     +--------------------------------------+
 ```
 
@@ -106,14 +118,17 @@ Supra AI runs on a central **LangGraph** deterministic state machine (`agent/gra
 - **Entrypoint:**
   * **Next.js reviewer UI** (`mvp/frontend`) — upload a certificate, inspect an audit, review the evidence, act on gap notices.
 - **Backend / pipeline:**
-  * **FastAPI** (`agent/server.py`) — `POST /api/audit`, `GET /api/logs`, `PATCH /api/logs/{id}/review`, `/api/gap-notice*`.
+  * **FastAPI** (`agent/server.py`) — `POST /api/audit`, `GET /api/logs`, `PATCH /api/logs/{id}/review`, `/api/gap-notice*`, `POST /api/logs/{id}/chat`.
   * **LangGraph state machine** (`agent/graph.py`) — `extract → classify_doc_type → validate_fields → (reconcile, bounded to 2 retries) → resolve_sku → rule_engine → (flag_for_human_review if unresolved)`.
+  * **Audit Copilot** (`agent/copilot.py`) — assembles a single audit's `FlagsDetail`/evidence/gap-notice into context, calls the same LLM client `graph.py` uses, returns a grounded answer plus a `grounded` flag the UI surfaces when the question falls outside the case's evidence.
 - **External services & stack:**
-  * **OpenAI** — structured-output extraction of certificate fields and gap-notice drafting.
+  * **OpenAI** — structured-output extraction of certificate fields, gap-notice drafting, and Copilot chat responses.
   * **Postgres on Render** (`agent/db.py`) — durable store for the audit ledger and the gap-notice lifecycle, replacing the earlier flat-file (CSV/JSON) persistence.
-  * **LangSmith** — every graph run is traced for observability (`LANGCHAIN_PROJECT`).
+  * **LangSmith** — every graph run and Copilot chat turn is traced for observability (`LANGSMITH_PROJECT`; the legacy `LANGCHAIN_PROJECT`/`LANGCHAIN_TRACING_V2` names are also read by the SDK, but `LANGSMITH_*` is the source of truth in `.env` — keep only one project name set to avoid traces silently splitting across two projects).
   * **Telegram Bot API** — best-effort internal notification when a gap notice is marked sent.
-- **Outputs:** a reviewer-facing audit queue and detail view, an editable/approvable/sendable supplier gap notice, and a full audit trail in Postgres.
+- **Outputs:** 
+  * a reviewer-facing audit queue and detail view, an editable/approvable/sendable supplier gap notice, and a full audit trail in Postgres.
+  * Audit Copilot Chat — reviewer-facing conversational investigation of the selected audit and its evidence, read-only against the compliance decision.
 
 ### Execution Flow & Decision Tree
 
@@ -152,6 +167,7 @@ supra-ai/
 │   ├── schemas.py                # Pydantic models
 │   ├── gap_notice.py             # Gap notice generation + lifecycle
 │   ├── gap_notice_store.py
+│   ├── copilot.py                # Audit Copilot Chat — context assembly + grounded LLM call
 │   ├── telegram_dispatch.py
 │   └── run_pdf.py                # CLI runner
 ├── mvp/
@@ -164,7 +180,7 @@ supra-ai/
 │   └── gdpr_documentation.md
 ├── docs/
 │   ├── planning/                 # rollout_plan.md, user_stories.md, acceptance_criteria.md, definition_of_done.md
-│   ├── implementation_docs/       # langgraph_implementation.md
+│   ├── implementation_docs/       # langgraph_implementation.md, copilot_chat.md
 │   └── product_requirement/       # design_doc.md
 ├── feedback/
 │   ├── Supra_AI_Round1_Presentation.pdf
