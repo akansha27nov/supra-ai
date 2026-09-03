@@ -13,6 +13,33 @@ from trace_sample import (
 )
 
 
+def _resolve_pdf_path(pdf_dir: Path, file_name: str) -> Path | None:
+    """Resolves a ground-truth file_name to an actual PDF path under pdf_dir.
+
+    Real-world PDFs live in subfolders by document type (raw/DoC/,
+    raw/b2b/, raw/lab_reports/, raw/lab_reports/b2b/), but ground truth
+    entries only ever record a bare file_name. A flat `pdf_dir / file_name`
+    lookup misses anything not sitting directly in pdf_dir's root -- which,
+    after the repo's DoC/lab_report/b2b reorganization, is now every single
+    real-world ground-truth entry (see the identical fix in
+    master_benchmark.py's evaluate_dataset()). This searches pdf_dir and all
+    of its subfolders for an exact filename match before giving up.
+    """
+    flat_path = pdf_dir / file_name
+    if flat_path.exists():
+        return flat_path
+
+    matches = list(pdf_dir.rglob(file_name))
+    if not matches:
+        return None
+    if len(matches) > 1:
+        print(
+            f"⚠️ Warning: multiple files named '{file_name}' found under {pdf_dir} "
+            f"({[str(m) for m in matches]}); using the first match."
+        )
+    return matches[0]
+
+
 # ==============================================================================
 # TIER 1: LLM EXTRACTION PRECISION BENCHMARK (Real PDFs)
 # ==============================================================================
@@ -40,9 +67,9 @@ def run_tier1_extraction_benchmark():
 
     for case in ground_truth:
         file_name = case["file_name"]
-        pdf_path = REAL_WORLD_DIR / file_name
+        pdf_path = _resolve_pdf_path(REAL_WORLD_DIR, file_name)
 
-        if not pdf_path.exists():
+        if pdf_path is None:
             print(f"⚠️ PDF File Missing: {file_name}")
             continue
 

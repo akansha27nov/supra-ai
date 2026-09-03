@@ -10,6 +10,34 @@ REAL_WORLD_PDF_DIR = DATA_DIR / "real_world" / "raw"
 from trace_sample import audit_certificate, extract_pdf_text, load_skus
 
 
+def _resolve_pdf_path(pdf_dir: Path, file_name: str) -> Path | None:
+    """Resolves a ground-truth file_name to an actual PDF path under pdf_dir.
+
+    Real-world PDFs are organized into subfolders by document type
+    (raw/DoC/, raw/lab_reports/, raw/lab_reports/b2b/, raw/b2b/), but ground
+    truth entries only ever recorded a bare file_name. A flat `pdf_dir /
+    file_name` lookup silently misses anything not sitting directly in
+    pdf_dir's root -- which is exactly what happened to the one lab-report
+    ground-truth entry (Celestron Smartphone Adapter), causing it to print
+    "FILE MISSING" and be silently dropped from every benchmark run without
+    ever affecting the reported accuracy. This searches pdf_dir and all of
+    its subfolders for an exact filename match before giving up.
+    """
+    flat_path = pdf_dir / file_name
+    if flat_path.exists():
+        return flat_path
+
+    matches = list(pdf_dir.rglob(file_name))
+    if not matches:
+        return None
+    if len(matches) > 1:
+        print(
+            f"⚠️ Warning: multiple files named '{file_name}' found under {pdf_dir} "
+            f"({[str(m) for m in matches]}); using the first match."
+        )
+    return matches[0]
+
+
 def evaluate_dataset(dataset_label: str, data_file: Path, pdf_dir: Path, sku_file: Path):
     """Evaluates a dataset against ground truth with flat dict resilience."""
     if not data_file.exists():
@@ -32,9 +60,9 @@ def evaluate_dataset(dataset_label: str, data_file: Path, pdf_dir: Path, sku_fil
 
     for example in ground_truth:
         file_name = example["file_name"]
-        pdf_path = pdf_dir / file_name
+        pdf_path = _resolve_pdf_path(pdf_dir, file_name)
 
-        if not pdf_path.exists():
+        if pdf_path is None:
             print(f"{file_name:<40} {'N/A':<15} {'FILE MISSING':<15} [MISSING]")
             continue
 

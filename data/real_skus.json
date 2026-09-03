@@ -38,5 +38,13 @@
     "max_lead_concentration_ppm": 1000,
     "mandatory_standards": ["Directive 2011/65/EU"],
     "covered_part_numbers": ["UNO-C01X001", "UNO-C07X011", "UNO-C01X000"]
+  },
+  {
+    "sku": "SKU-OPT-CEL-81035",
+    "name": "Celestron Smartphone Adapter",
+    "category": "Optics / Astronomy Accessories",
+    "max_lead_concentration_ppm": 1000,
+    "mandatory_standards": ["Directive 2011/65/EU"],
+    "covered_part_numbers": ["81035", "#81035"]
   }
 ]

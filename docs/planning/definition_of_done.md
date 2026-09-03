@@ -26,7 +26,7 @@ A feature or milestone is considered done only when the implementation is workin
 - [ ] Extraction results are evaluated field-by-field.
 - [ ] Overall extraction target is >=90% on the agreed benchmark.
 - [ ] DoC and lab-report results are reported separately where useful.
-- [ ] Tier 2 rule-engine tests cover representative PASS, FLAGGED, and REJECTED cases.
+- [ ] Tier 2 rule-engine tests cover representative APPROVED, FLAGGED, and REJECTED cases.
 - [ ] Synthetic and real-world benchmark exports remain separately identifiable.
 
 ## 4. Business/Operational DoD
