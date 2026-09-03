@@ -1,0 +1,672 @@
+{
+  "name": "Supra AI - PDF-Only Compliance Document Auditor POC",
+  "nodes": [
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "d30a75c2-6761-4407-8a9b-6f61567a860f",
+      "name": "Merge Terminal Branches",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        0,
+        1232
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Compliance Document Upload Portal",
+        "formDescription": "Upload supplier test certificate PDF for automated compliance auditing, SKU catalog matching, and risk triage.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "CertificatePDF",
+              "fieldType": "file",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3821f558-8471-490e-9630-ad3d71a77fdf",
+      "name": "n8n Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -2896,
+        1296
+      ],
+      "webhookId": "5f8e7fc2-2f81-4ddc-8b90-56acc59a7fbb"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "CertificatePDF",
+        "options": {}
+      },
+      "id": "60770826-b51b-46b1-8e17-777b994910ab",
+      "name": "Extract PDF Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -2672,
+        1296
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=={{ $json.text }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are a regulatory compliance document parser. Extract structured fields from the raw test certificate below.\n\nRAW TEXT:\n{{ $json.text }}\n\nReturn JSON strictly conforming to this structure:\n{\n  \"product_name\": \"string (the main product/model described in the cert)\",\n  \"document_type\": \"string\",\n  \"certificate_id\": \"string\",\n  \"supplier_name\": \"string\",\n  \"issuing_lab\": \"string\",\n  \"lab_accreditation_id\": \"string\",\n  \"issue_date\": \"YYYY-MM-DD\",\n  \"expiration_date\": \"YYYY-MM-DD\",\n  \"standards_found\": [\"array of strings\"],\n  \"tested_lead_ppm\": number\n}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -2464,
+        1296
+      ],
+      "id": "095a0b0c-5112-4471-a613-8f4cbddc3cb3",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -2544,
+        1504
+      ],
+      "id": "f02f8d2c-6550-48bf-bf4b-832389c41546",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "1iV2pZHcPmBJvIjD",
+          "name": "Akansha OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Clean stringified JSON output from LLM (removes markdown backticks if present)\nconst rawOutput = $input.first().json.text || $input.first().json.message.content;\n\nlet parsedData;\ntry {\n  const cleanJson = typeof rawOutput === 'string' \n    ? rawOutput.replace(/```json|```/g, '').trim() \n    : rawOutput;\n  parsedData = typeof cleanJson === 'string' ? JSON.parse(cleanJson) : cleanJson;\n} catch (e) {\n  parsedData = $input.first().json; // Fallback if already an object\n}\n\nreturn [{ json: parsedData }];"
+      },
+      "id": "108bdfe6-9f98-45d8-87ae-41d433263f1a",
+      "name": "Parse Extracted JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2112,
+        1296
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// SKU Catalog\nconst skus = [\n  {\n    \"sku\": \"SKU-ELEC-9000\",\n    \"product_name\": \"Over-Ear Wireless Headphones\",\n    \"mandatory_standards\": [\"RED Directive 2014/53/EU\", \"RoHS Directive 2011/65/EU\", \"EN 62368-1:2020\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-8812\",\n    \"product_name\": \"Smart Ambient LED Desk Lamp\",\n    \"mandatory_standards\": [\"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\", \"EN 62368-1:2020\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9007\",\n    \"product_name\": \"65W Fast USB-C Wall Charger\",\n    \"mandatory_standards\": [\"CE Directive 2014/35/EU\", \"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9001\",\n    \"product_name\": \"Pro ANC Wireless Earbuds\",\n    \"mandatory_standards\": [\"RED Directive 2014/53/EU\", \"RoHS Directive 2011/65/EU\", \"EN 62368-1:2020\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9002\",\n    \"product_name\": \"Fitness Tracker Smartwatch V2\",\n    \"mandatory_standards\": [\"RED Directive 2014/53/EU\", \"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9003\",\n    \"product_name\": \"Fast-Charge Power Bank 20000mAh\",\n    \"mandatory_standards\": [\"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\", \"EN 62133-2:2017\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9004\",\n    \"product_name\": \"Ergonomic 27-Inch 4K USB-C Monitor\",\n    \"mandatory_standards\": [\"CE Directive 2014/35/EU\", \"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9005\",\n    \"product_name\": \"7-in-1 Aluminum USB-C Hub\",\n    \"mandatory_standards\": [\"CE Directive 2014/30/EU\", \"RoHS Directive 2011/65/EU\"],\n    \"max_lead_concentration_ppm\": 1000\n  },\n  {\n    \"sku\": \"SKU-ELEC-9006\",\n    \"product_name\": \"Smart Home Voice Assistant Speaker\",\n    \"mandatory_standards\": [\"RED Directive 2014/53/EU\", \"RoHS Directive 2011/65/EU\", \"ErP Directive 2009/125/EC\"],\n    \"max_lead_concentration_ppm\": 1000\n  }\n];\n\nconst extracted = $input.first().json;\n\nlet fileName = \"uploaded_certificate.pdf\";\nconst formNode = $node[\"n8n Form Trigger\"];\n\nif (formNode && formNode.binary) {\n  const binaryKeys = Object.keys(formNode.binary);\n  if (binaryKeys.length > 0) {\n    const firstBinaryField = formNode.binary[binaryKeys[0]];\n    fileName = firstBinaryField.fileName || firstBinaryField.filename || fileName;\n  }\n}\n\nlet matchedSku = null;\n\n// Strategy 1: Filename regex match for SKU ID (e.g. SKU-ELEC-9004)\nconst filenameSkuMatch = fileName.match(/SKU-[A-Z]+-\\d+/i);\nif (filenameSkuMatch) {\n  const code = filenameSkuMatch[0].toUpperCase();\n  matchedSku = skus.find(s => s.sku === code);\n}\n\n// Strategy 2: Fuzzy match extracted product_name against catalog\nif (!matchedSku && extracted.product_name) {\n  const pName = String(extracted.product_name).toLowerCase();\n  matchedSku = skus.find(s => {\n    const catName = s.product_name.toLowerCase();\n    const keywords = catName.split(\" \").filter(w => w.length > 3);\n    return keywords.filter(kw => pName.includes(kw)).length >= 2;\n  });\n}\n\nreturn [{\n  json: {\n    file_name: fileName,\n    extracted: extracted,\n    associated_sku: matchedSku ? matchedSku.sku : \"UNMATCHED_SKU\",\n    sku_rules: matchedSku || null,\n    sku_match_success: !!matchedSku\n  }\n}];"
+      },
+      "id": "b0b5a4e2-ee9e-43bd-b74e-9a9834e873b5",
+      "name": "Auto SKU Matcher & Rule Loader",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1904,
+        1296
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst extracted = item.extracted || {};\nconst rules = item.sku_rules;\n\nlet status = \"PASS\";\nlet priorityScore = 10;\nlet issues = [];\n\n// 1. SKU Match Check\nif (!item.sku_match_success) {\n  status = \"FLAGGED\";\n  priorityScore += 70; // 10 + 70 = 80 base priority\n  issues.push(\"CRITICAL: Automated catalog matcher could not map document to internal SKU\");\n}\n\n// 2. Expiration Check (Universal)\nif (extracted.expiration_date) {\n  const expDate = new Date(extracted.expiration_date);\n  const now = new Date(\"2026-08-28\");\n  const daysToExpiry = (expDate - now) / (1000 * 60 * 60 * 24);\n\n  if (expDate < now) {\n    status = \"REJECTED\";\n    priorityScore += 50;\n    issues.push(`CRITICAL: Certificate expired on ${extracted.expiration_date}`);\n  } else if (daysToExpiry <= 30) {\n    if (status !== \"REJECTED\") status = \"FLAGGED\";\n    priorityScore += 25;\n    issues.push(`WARNING: Certificate expires within 30 days (${extracted.expiration_date})`);\n  }\n}\n\n// 3. SKU-Dependent Checks (Standards & Lead limits)\nif (rules && rules.mandatory_standards) {\n  rules.mandatory_standards.forEach(std => {\n    const found = (extracted.standards_found || []).some(s => String(s).toLowerCase().includes(std.toLowerCase()));\n    if (!found) {\n      if (status !== \"REJECTED\") status = \"FLAGGED\";\n      priorityScore += 35;\n      issues.push(`WARNING: Missing mandatory standard ${std}`);\n    }\n  });\n\n  if (extracted.tested_lead_ppm && extracted.tested_lead_ppm > rules.max_lead_concentration_ppm) {\n    status = \"REJECTED\";\n    priorityScore += 45;\n    issues.push(`VIOLATION: Lead concentration (${extracted.tested_lead_ppm} ppm) exceeds threshold (${rules.max_lead_concentration_ppm} ppm)`);\n  }\n}\n\n// 4. Lab Accreditation Check (Case-Insensitive Universal Check)\nconst labAccId = String(extracted.lab_accreditation_id || \"\").toUpperCase();\nconst issuingLab = String(extracted.issuing_lab || \"\").toUpperCase();\n\nif (labAccId.includes(\"FAKE\") || labAccId.includes(\"UNRECOGNIZED\") || issuingLab.includes(\"UNRECOGNIZED\")) {\n  status = \"REJECTED\";\n  priorityScore += 50;\n  issues.push(`CRITICAL: Suspicious or fake laboratory accreditation detected (${extracted.lab_accreditation_id || 'Unrecognized'})`);\n} else if (labAccId === \"NONE\" || issuingLab.includes(\"UNACCREDITED\")) {\n  if (status !== \"REJECTED\") status = \"FLAGGED\";\n  priorityScore += 40;\n  issues.push(\"WARNING: Testing conducted by unaccredited lab\");\n}\n\nreturn [{\n  json: {\n    ...item,\n    audit_result: {\n      status: status,\n      screening_priority_score: Math.min(priorityScore, 100),\n      flagged_issues: issues\n    }\n  }\n}];"
+      },
+      "id": "d56d3ef6-2390-4d3c-8c86-d9763c48015b",
+      "name": "Compliance Engine & Priority Scoring",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1728,
+        1296
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "3ca6e3e4154880b8b0e1f030cb41d000",
+          "mode": "id"
+        },
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "key": "Certificate ID|title",
+              "condition": "equals",
+              "titleValue": "={{ $json.extracted.certificate_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5942e849-e49e-498b-b8a4-e9fac565147a",
+      "name": "Notion - Search Existing Cert",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -1536,
+        1296
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "notionApi": {
+          "id": "qNNrMt0J1jDlYZ0O",
+          "name": "Akansha Notion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c9f78f78-04e5-41fa-b67e-4101291d1dc9",
+              "leftValue": "={{ $json.id || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "efa7aa99-f2c0-44e4-a8e5-37a868167cd0",
+      "name": "IF Record Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1328,
+        1296
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Priority Score|number",
+              "numberValue": "={{ Number($('Compliance Engine & Priority Scoring').item.json.audit_result.screening_priority_score) }}"
+            },
+            {
+              "key": "Status|status",
+              "statusValue": "={{ $('Compliance Engine & Priority Scoring').item.json.audit_result.status }}"
+            },
+            {
+              "key": "Flagged Issues|rich_text",
+              "textContent": "={{ $('Compliance Engine & Priority Scoring').item.json.audit_result.flagged_issues.join('; ') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6e51bb77-0014-4876-81db-77bded160228",
+      "name": "Notion - Update Existing Record",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -832,
+        976
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "qNNrMt0J1jDlYZ0O",
+          "name": "Akansha Notion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $('Compliance Engine & Priority Scoring').item.json.audit_result.screening_priority_score }}",
+              "operation": "largerEqual",
+              "value2": 50
+            }
+          ]
+        }
+      },
+      "id": "3a9598a7-65f4-4dea-b5e4-2342bc96cf83",
+      "name": "IF High Risk Router",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -1072,
+        1312
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "8727727063",
+        "text": "=⚠️ *HIGH-RISK CERTIFICATE DETECTED*\n\n*File:* `{{ $('Compliance Engine & Priority Scoring').item.json.file_name }}`\n*SKU:* `{{ $('Compliance Engine & Priority Scoring').item.json.associated_sku }}`\n*Supplier:* {{ $('Compliance Engine & Priority Scoring').item.json.extracted.supplier_name || 'N/A' }}\n*Priority Score:* *{{ $('Compliance Engine & Priority Scoring').item.json.audit_result.screening_priority_score }}/100*\n*Status:* {{ $('Compliance Engine & Priority Scoring').item.json.audit_result.status }}\n\n*Flagged Issues:*\n{{ ($('Compliance Engine & Priority Scoring').item.json.audit_result.flagged_issues || []).map(i => \"• \" + i).join(\"\\n\") }}\n\n📝 *Draft Gap Notice:*\n{{ $('Draft Gap Notice').item.json.text }} \n\n📋 *Routed to Notion Human Review Queue*",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "a5bb18db-fa17-4bc1-a368-fe04dd309059",
+      "name": "Telegram High-Risk Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -528,
+        1248
+      ],
+      "webhookId": "c19d53ee-7125-4c76-96a0-55cfad358397",
+      "credentials": {
+        "telegramApi": {
+          "id": "kE9F2X2wftoTy8xT",
+          "name": "Akansha Telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "3ca6e3e4154880b8b0e1f030cb41d000",
+          "mode": "id"
+        },
+        "title": "={{ $('Compliance Engine & Priority Scoring').item.json.extracted.certificate_id || 'UNKNOWN_CERT_ID' }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Supplier|rich_text",
+              "textContent": "={{ $('Compliance Engine & Priority Scoring').item.json.extracted.supplier_name }}"
+            },
+            {
+              "key": "Priority Score|number",
+              "numberValue": "={{ Number($('Compliance Engine & Priority Scoring').item.json.audit_result.screening_priority_score) }}"
+            },
+            {
+              "key": "Flagged Issues|rich_text",
+              "textContent": "={{ $('Compliance Engine & Priority Scoring').item.json.audit_result.flagged_issues.join('; ') }}"
+            },
+            {
+              "key": "Status|status",
+              "statusValue": "={{ $('Compliance Engine & Priority Scoring').item.json.audit_result.status }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1119e1ce-e67f-4c04-b53f-166e98f53776",
+      "name": "Notion High-Risk Queue",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -304,
+        1248
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "qNNrMt0J1jDlYZ0O",
+          "name": "Akansha Notion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch extracted data directly from your upstream compliance/extraction node\nconst auditData = $('Compliance Engine & Priority Scoring').first().json;\n\nconst extracted = auditData.extracted || {};\nconst auditResult = auditData.audit_result || {};\nconst flaggedIssues = auditResult.flagged_issues || [];\n\nconst tableauRecord = {\n  timestamp: new Date().toISOString(),\n  file_name: auditData.file_name || \"\",\n  associated_sku: auditData.associated_sku || \"\",\n  product_name: extracted.product_name || \"\",\n  certificate_id: extracted.certificate_id || \"\",\n  supplier_name: extracted.supplier_name || \"\",\n  issuing_lab: extracted.issuing_lab || \"\",\n  lab_accreditation_id: extracted.lab_accreditation_id || \"\",\n  issue_date: extracted.issue_date || \"\",\n  expiration_date: extracted.expiration_date || \"\",\n  tested_lead_ppm: extracted.tested_lead_ppm ?? null,\n  audit_status: auditResult.status || \"\",\n  screening_priority_score: auditResult.screening_priority_score ?? null,\n  flagged_issues_count: flaggedIssues.length,\n  flagged_issues_detail: flaggedIssues.join(\" | \")\n};\n\nreturn [{ json: tableauRecord }];"
+      },
+      "id": "899612b5-0f9e-4b26-af44-0fce2735b321",
+      "name": "Format for Tableau Export",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        1488
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "3ca6e3e4154880b8b0e1f030cb41d000",
+          "__regex": "^([0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12})"
+        },
+        "title": "={{ $('Compliance Engine & Priority Scoring').item.json.extracted.certificate_id }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Supplier|rich_text",
+              "textContent": "={{ $('Compliance Engine & Priority Scoring').item.json.extracted.supplier_name }}"
+            },
+            {
+              "key": "Priority Score|number",
+              "numberValue": "={{ Number($('Compliance Engine & Priority Scoring').item.json.audit_result.screening_priority_score) }}"
+            },
+            {
+              "key": "Status|status",
+              "statusValue": "=Standard Review"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "838ef3da-0d62-4fea-a346-8f151ae7a699",
+      "name": "Notion Master Registry",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -672,
+        1568
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "qNNrMt0J1jDlYZ0O",
+          "name": "Akansha Notion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a procurement compliance officer. Based on the compliance issues below, write a short, polite email to the supplier requesting corrective documentation. Do not invent any information not listed below.\n\nSupplier: {{ $('Compliance Engine & Priority Scoring').item.json.extracted.supplier_name }}\nCertificate ID: {{ $('Compliance Engine & Priority Scoring').item.json.extracted.certificate_id }}\nStatus: {{ $('Compliance Engine & Priority Scoring').item.json.audit_result.status }}\n\nIssues found:\n{{ $('Compliance Engine & Priority Scoring').item.json.audit_result.flagged_issues.join('\\n') }}\n\nWrite a concise email (under 150 words) that states the issue(s), requests specific corrective documentation, and stays professional. Do not include a subject line, just the email body.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are a procurement compliance officer. Based on the compliance issues below, write a short, polite email to the supplier requesting corrective documentation. Do not invent any information not listed below.\n\nSupplier: {{ $('Compliance Engine & Priority Scoring').item.json.extracted.supplier_name }}\nCertificate ID: {{ $('Compliance Engine & Priority Scoring').item.json.extracted.certificate_id }}\nStatus: {{ $('Compliance Engine & Priority Scoring').item.json.audit_result.status }}\n\nIssues found:\n{{ $('Compliance Engine & Priority Scoring').item.json.audit_result.flagged_issues.join('\\n') }}\n\nWrite a concise email (under 150 words) that: states the issue(s) found, requests specific corrective documentation, and stays professional. Do not include a subject line, just the email body."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -832,
+        1200
+      ],
+      "id": "5b251e13-6aa5-4431-9a8b-1b7e1dc9f2f1",
+      "name": "Draft Gap Notice"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -688,
+        1360
+      ],
+      "id": "0b8bd564-f34b-44cb-823e-6d78a32a0ad0",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "1iV2pZHcPmBJvIjD",
+          "name": "Akansha OpenAI"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Merge Terminal Branches": {
+      "main": [
+        [
+          {
+            "node": "Format for Tableau Export",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "n8n Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract PDF Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract PDF Text": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Parse Extracted JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Extracted JSON": {
+      "main": [
+        [
+          {
+            "node": "Auto SKU Matcher & Rule Loader",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto SKU Matcher & Rule Loader": {
+      "main": [
+        [
+          {
+            "node": "Compliance Engine & Priority Scoring",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compliance Engine & Priority Scoring": {
+      "main": [
+        [
+          {
+            "node": "Notion - Search Existing Cert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion - Search Existing Cert": {
+      "main": [
+        [
+          {
+            "node": "IF Record Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Record Exists?": {
+      "main": [
+        [
+          {
+            "node": "Notion - Update Existing Record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF High Risk Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion - Update Existing Record": {
+      "main": [
+        [
+          {
+            "node": "Merge Terminal Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF High Risk Router": {
+      "main": [
+        [
+          {
+            "node": "Draft Gap Notice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notion Master Registry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram High-Risk Alert": {
+      "main": [
+        [
+          {
+            "node": "Notion High-Risk Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion High-Risk Queue": {
+      "main": [
+        [
+          {
+            "node": "Merge Terminal Branches",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Notion Master Registry": {
+      "main": [
+        [
+          {
+            "node": "Merge Terminal Branches",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Draft Gap Notice": {
+      "main": [
+        [
+          {
+            "node": "Telegram High-Risk Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Draft Gap Notice",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "87a126c7-77a6-47d7-94df-df4bc833f1b7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "00cafa1eb8a383ac595b6bbf54c5f8acd05d9d1462911bd4a0edac031509b829"
+  },
+  "id": "Jy3VWp9uHWue3rF8",
+  "tags": []
+}
