@@ -106,5 +106,65 @@
     "updated_at": "2026-09-03T08:45:47.024135+00:00",
     "approved_by": "Lead Auditor",
     "approved_at": "2026-09-03T08:45:46.057389+00:00"
+  },
+  "aaed7ca4-fc79-4d43-aca9-d076b8087efb": {
+    "notice_id": "aaed7ca4-fc79-4d43-aca9-d076b8087efb",
+    "audit_id": "08b6013c-a1fa-47a3-9350-7d2fab51bd21",
+    "supplier_name": "PowerGeniusGmbH",
+    "status": "DRAFT",
+    "failed_rules": [
+      "NO_SKU_MATCH",
+      "NO_MEASURED_LEAD_VALUE",
+      "UNACCREDITED_LABORATORY"
+    ],
+    "evidence": [
+      {
+        "rule_code": "NO_SKU_MATCH",
+        "exact_quote": null,
+        "page_number": null,
+        "section": null
+      },
+      {
+        "rule_code": "NO_MEASURED_LEAD_VALUE",
+        "exact_quote": null,
+        "page_number": null,
+        "section": null
+      },
+      {
+        "rule_code": "UNACCREDITED_LABORATORY",
+        "exact_quote": null,
+        "page_number": null,
+        "section": null
+      }
+    ],
+    "corrective_action": "Please provide updated documentation that includes the correct SKU match, a lab test report with a measured lead (Pb) value, and evidence of laboratory accreditation.",
+    "editable_email_draft": "Subject: Request for Updated Documentation\n\nDear PowerGeniusGmbH Team,\n\nI hope this message finds you well. \n\nWe have recently reviewed the documentation related to your products and identified some compliance gaps that need to be addressed. Specifically, we found the following issues:\n\n1. Extracted part numbers did not match any catalog SKU.\n2. The lab test report contains no measured lead (Pb) value.\n3. There is no accreditation ID present for the laboratory.\n\nTo ensure compliance, we kindly request that you provide updated documentation that includes the correct SKU match, a lab test report with a measured lead (Pb) value, and evidence of laboratory accreditation.\n\nThank you for your attention to this matter. We look forward to your prompt response.\n\nBest regards,\n\n[Your Name]  \n[Your Position]  \n[Your Company]  \n[Your Contact Information]",
+    "created_at": "2026-09-03T16:30:35.460743+00:00",
+    "updated_at": "2026-09-03T16:30:35.460750+00:00",
+    "approved_by": null,
+    "approved_at": null
+  },
+  "3498f73c-318a-4a99-b807-2e75780a48dc": {
+    "notice_id": "3498f73c-318a-4a99-b807-2e75780a48dc",
+    "audit_id": "8aa0a530-e6c5-4673-a51d-276c80b80473",
+    "supplier_name": "Concens A/S",
+    "status": "DRAFT",
+    "failed_rules": [
+      "OLD_ISSUE_DATE"
+    ],
+    "evidence": [
+      {
+        "rule_code": "OLD_ISSUE_DATE",
+        "exact_quote": null,
+        "page_number": null,
+        "section": null
+      }
+    ],
+    "corrective_action": "Please provide an updated document with a current issue date to ensure compliance.",
+    "editable_email_draft": "Subject: Request for Updated Documentation\n\nDear Concens A/S Team,\n\nI hope this message finds you well. \n\nWe have recently reviewed the documentation associated with your products and identified a compliance gap regarding the issue date of the document referenced above. Specifically, the document's issue date exceeds our configured baseline age, which is flagged under the rule OLD_ISSUE_DATE.\n\nTo ensure compliance, we kindly request that you provide us with an updated document that reflects a current issue date at your earliest convenience.\n\nThank you for your attention to this matter. We appreciate your cooperation and look forward to your prompt response.\n\nBest regards,\n\n[Your Name]  \n[Your Position]  \n[Your Company]  \n[Your Contact Information]",
+    "created_at": "2026-09-03T16:38:46.662704+00:00",
+    "updated_at": "2026-09-03T16:38:46.662710+00:00",
+    "approved_by": null,
+    "approved_at": null
   }
 }

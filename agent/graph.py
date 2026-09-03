@@ -88,7 +88,6 @@ def match_sku(covered_part_numbers: list[str], sku_catalog: dict[str, dict[str, 
     return None
 
 
-
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
 
 
@@ -593,11 +592,18 @@ def route_after_validation(state: AuditState) -> Literal["resolve_sku", "reconci
     if state.get("doc_type") == "unknown":
         return "flag_for_human_review"
     
-    # Kept in sync with reconcile_node / flag_for_human_review_node's definition of
-    # "unresolved" — both "absent_expected" and "ambiguous" require reconciliation.
-    unresolved = any(s in ("absent_expected", "ambiguous") for s in state["field_status"].values())
+    # Only "ambiguous" forces reconciliation/escalation. "absent_expected" is
+    # deliberately NOT treated as blocking here: a missing covered_part_numbers
+    # or tested_lead_ppm is already handled downstream by resolve_sku_node
+    # (sku_match_status="unmatched") and rule_engine_node's own dedicated flags
+    # (e.g. NO_MEASURED_LEAD_VALUE) — those give a real, scored decision instead
+    # of forcing every document with a missing-but-not-untrustworthy field into
+    # REQUIRES_HUMAN_REVIEW. (Previously this also checked "absent_expected",
+    # which broke real-world benchmark accuracy — see tests/test_graph_routing.py
+    # for the corrected expectations.)
+    ambiguous = any(s == "ambiguous" for s in state["field_status"].values())
 
-    if not unresolved:
+    if not ambiguous:
         return "resolve_sku"
 
     if state["reconciliation_attempts"] < 2:

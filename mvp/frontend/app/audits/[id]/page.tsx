@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
+import ViolationCard from '@/components/ViolationCard';
 import { 
   ArrowLeft, CheckCircle, XCircle, FileText, 
   ShieldAlert, Mail, Send, UserCheck, Layers, FileSearch, SlidersHorizontal,
-  Quote, Hash, BookOpen
 } from 'lucide-react';
 import {
   fetchAuditLogs,
@@ -18,13 +18,13 @@ import {
   sendGapNotice,
   AuditLog,
   GapNoticeRecord,
-  RuleViolationDetail,
 } from '@/lib/api';
 import { exportAuditLogsToCSV } from '@/lib/exportUtils';
 
 export default function AuditDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const auditId = (params?.id as string) || '';
 
   const [audit, setAudit] = useState<AuditLog | null>(null);
@@ -74,6 +74,18 @@ export default function AuditDetailPage() {
     };
     loadAudit();
   }, [auditId]);
+
+  // Supports linking directly into the gap-notice flow — e.g. the dashboard's
+  // "Request Doc" priority action links here with ?action=gap-notice instead
+  // of duplicating the generate/edit/approve/send workflow inline on the
+  // dashboard. Fires once, as soon as the audit has loaded.
+  useEffect(() => {
+    if (audit && searchParams.get('action') === 'gap-notice' && !showGapModal) {
+      setShowGapModal(true);
+      loadGapNotice(audit);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audit, searchParams]);
 
   // The ledger only stores flags as one joined "CODE: message | CODE: message" string,
   // not the structured list-of-dicts the backend's gap_notice generator expects. Parse
@@ -620,76 +632,6 @@ export default function AuditDetailPage() {
           </div>
         )}
       </main>
-    </div>
-  );
-}
-
-/**
- * Renders one rule violation as a card, with an expandable evidence block
- * (exact quote, page, section) when the ledger's FlagsDetail carried
- * SourceEvidence for that violation. Replaces the previous flat-text dump
- * of the Flags string with something that lets a reviewer actually see
- * *where* in the source document a violation came from, not just that it
- * fired — the evidence exists in the pipeline (RuleViolation.evidence) but
- * previously never survived past the moment the audit ran.
- */
-function ViolationCard({ violation }: { violation: RuleViolationDetail }) {
-  const [expanded, setExpanded] = useState(false);
-  const hasEvidence = Boolean(violation.evidence?.exact_quote);
-
-  const severityStyle =
-    violation.severity_score >= 75
-      ? 'bg-error/10 text-error'
-      : violation.severity_score >= 50
-      ? 'bg-amber-100 text-amber-800'
-      : 'bg-surface-container-highest text-on-surface-variant';
-
-  return (
-    <div className="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden">
-      <button
-        type="button"
-        onClick={() => hasEvidence && setExpanded((prev) => !prev)}
-        disabled={!hasEvidence}
-        className={`w-full flex items-start justify-between gap-3 p-3 text-left ${hasEvidence ? 'cursor-pointer hover:bg-surface-container' : 'cursor-default'}`}
-      >
-        <div className="flex flex-col gap-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-xs font-semibold text-on-surface">{violation.code}</span>
-            <span className={`px-2 py-0.5 rounded text-xs font-bold ${severityStyle}`}>
-              {violation.severity_score}
-            </span>
-          </div>
-          <span className="text-sm text-on-surface-variant leading-snug">{violation.message}</span>
-        </div>
-        {hasEvidence && (
-          <span className="text-xs text-primary font-medium whitespace-nowrap pt-0.5">
-            {expanded ? 'Hide evidence' : 'Show evidence'}
-          </span>
-        )}
-      </button>
-
-      {expanded && hasEvidence && (
-        <div className="px-3 pb-3 flex flex-col gap-2 border-t border-outline-variant pt-3 bg-surface-container/40">
-          <div className="flex items-start gap-2">
-            <Quote size={14} className="text-primary mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-on-surface italic leading-relaxed">
-              "{violation.evidence!.exact_quote}"
-            </p>
-          </div>
-          <div className="flex items-center gap-4 text-xs text-on-surface-variant pl-6">
-            {violation.evidence!.page_number != null && (
-              <span className="flex items-center gap-1">
-                <Hash size={12} /> Page {violation.evidence!.page_number}
-              </span>
-            )}
-            {violation.evidence!.section && (
-              <span className="flex items-center gap-1">
-                <BookOpen size={12} /> {violation.evidence!.section}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

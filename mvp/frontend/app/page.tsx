@@ -1,12 +1,15 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
+import ViolationCard from '@/components/ViolationCard';
 import { exportAuditLogsToCSV } from "@/lib/exportUtils";
-import { fetchAuditLogs, AuditLog, uploadAuditDocument, generateGapNotice, submitReviewDecision } from '@/lib/api';
+import { fetchAuditLogs, AuditLog, RuleViolationDetail, uploadAuditDocument, generateGapNotice, submitReviewDecision } from '@/lib/api';
 import { Plus, FileUp, ShieldCheck, AlertCircle, FileText, CheckCircle2, XCircle, X } from 'lucide-react';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -386,11 +389,17 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant flex flex-col gap-2">
                       <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant font-label-caps">Extracted Flags</h4>
-                      <div className="p-3 bg-surface-container rounded-lg border border-outline-variant font-mono text-xs text-on-surface">
-                        {auditResult.audit_result?.flags && auditResult.audit_result.flags.length > 0 
-                          ? JSON.stringify(auditResult.audit_result.flags, null, 2) 
-                          : "No compliance infractions flagged."}
-                      </div>
+                      {auditResult.audit_result?.flags && auditResult.audit_result.flags.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                          {(auditResult.audit_result.flags as RuleViolationDetail[]).map((violation, idx) => (
+                            <ViolationCard key={`${violation.code}-${idx}`} violation={violation} showEvidence={false} />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-surface-container rounded-lg border border-outline-variant text-xs text-on-surface-variant">
+                          No compliance infractions flagged.
+                        </div>
+                      )}
                     </div>
                     <div className="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant flex flex-col gap-3">
                       <div className="flex items-center justify-between">
@@ -865,8 +874,18 @@ export default function DashboardPage() {
                         <h4 className="text-sm font-bold text-on-surface mb-1 font-body-md">{alert["File Name"]}</h4>
                         <p className="text-xs text-on-surface-variant mb-2 font-body-sm line-clamp-2">{alert.Flags || "High-risk non-compliance flagged."}</p>
                         <div className="flex gap-2">
-                          <button className="text-xs font-medium bg-white border border-outline-variant px-2.5 py-1 rounded text-on-surface hover:bg-surface-container transition-colors shadow-sm">View Details</button>
-                          <button className="text-xs font-medium bg-error text-white px-2.5 py-1 rounded hover:bg-error/90 transition-colors shadow-sm">Request Doc</button>
+                          <button
+                            onClick={() => router.push(`/audits/${alert.RecordID}`)}
+                            className="text-xs font-medium bg-white border border-outline-variant px-2.5 py-1 rounded text-on-surface hover:bg-surface-container transition-colors shadow-sm"
+                          >
+                            View Details
+                          </button>
+                          <button
+                            onClick={() => router.push(`/audits/${alert.RecordID}?action=gap-notice`)}
+                            className="text-xs font-medium bg-error text-white px-2.5 py-1 rounded hover:bg-error/90 transition-colors shadow-sm"
+                          >
+                            Request Doc
+                          </button>
                         </div>
                       </div>
                     </div>

@@ -14,6 +14,7 @@
 
 ## Live MVP
 
+Live here: [supra-ai](https://supra-ai.netlify.app/)
 | Layer | Where | Notes |
 |---|---|---|
 | Frontend | Netlify (Next.js, `mvp/frontend`) | Reviewer UI — upload, audit queue, audit detail, analytics |
