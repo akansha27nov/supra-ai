@@ -1,0 +1,89 @@
+[
+  {
+    "file_name": "Sharp HT-SB121 Soundbar \u2014 DoC.pdf",
+    "doc_type": "manufacturer_self_declaration",
+    "associated_sku": null,
+    "sku_match_status": "unmatched",
+    "extracted": {
+      "document_classification": "DECLARATION_OF_CONFORMITY",
+      "certificate_id": "HT-SB12x/2025",
+      "supplier_name": "Sharp Consumer Electronics Poland sp. z o.o.",
+      "issuing_lab": null,
+      "accreditation_id": null,
+      "issue_date": "2025-08-11",
+      "expiration_date": null,
+      "covered_part_numbers": [
+        "SHARP HT-SB121",
+        "SHARP HT-SB123"
+      ],
+      "standards_tested": [
+        "RoHS Directive 2011/65/EU",
+        "2015/863(EU)",
+        "RED Directive 2014/53/EU - RED article 3.1a, 3.1b, 3.2",
+        "EN 55032: 2015 + A11:2020",
+        "EN 55035: 2017 + A11:2020",
+        "EN IEC 61000-3-2:2019+A2:2024",
+        "EN 61000-3-3:2013+A2:2021",
+        "EN IEC 62368-1:2024+A11:2024",
+        "EN 301 489-1 V2.2.3 (2019-11)",
+        "EN 301 489-17 V3.3.1 (2024-09)",
+        "EN 300 328 V2.2.2 (2019-07)",
+        "EN 50663:2017",
+        "EN 62479:2010",
+        "REACH Regulation No. 1907/2006",
+        "AfPS GS 2019:01 PAK",
+        "European Parliament and Council Regulation (EC) 2019/1021",
+        "COMMISSION REGULATION (EU) 2023/826",
+        "COMMISSION REGULATION (EU) 2023/1670",
+        "EN 50564:2011"
+      ],
+      "tested_lead_ppm": null,
+      "is_statutory_limit": false,
+      "lead_exemption_cited": false,
+      "evidence_links": [
+        {
+          "field_name": "supplier_name",
+          "exact_quote": "Sharp Consumer Electronics Poland sp. z o.o.",
+          "page_number": 1,
+          "section": "2. Name and address of manufacturer"
+        },
+        {
+          "field_name": "issue_date",
+          "exact_quote": "11.08.2025",
+          "page_number": 1,
+          "section": "Place and date of issue"
+        },
+        {
+          "field_name": "covered_part_numbers",
+          "exact_quote": "SHARP HT-SB121",
+          "page_number": 1,
+          "section": "4. Object of the declaration"
+        },
+        {
+          "field_name": "covered_part_numbers",
+          "exact_quote": "SHARP HT-SB123",
+          "page_number": 1,
+          "section": "4. Object of the declaration"
+        },
+        {
+          "field_name": "standards_tested",
+          "exact_quote": "RoHS Directive 2011/65/EU",
+          "page_number": 1,
+          "section": "5. The object of the declaration described above is in conformity with the relevant Union harmonisation legislation"
+        },
+        {
+          "field_name": "standards_tested",
+          "exact_quote": "2015/863(EU)",
+          "page_number": 1,
+          "section": "5. The object of the declaration described above is in conformity with the relevant Union harmonisation legislation"
+        },
+        {
+          "field_name": "standards_tested",
+          "exact_quote": "RED Directive 2014/53/EU - RED article 3.1a, 3.1b, 3.2",
+          "page_number": 1,
+          "section": "5. The object of the declaration described above is in conformity with the relevant Union harmonisation legislation"
+        }
+      ]
+    }
+  }
+]

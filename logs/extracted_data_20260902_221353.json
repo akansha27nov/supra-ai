@@ -1,0 +1,61 @@
+[
+  {
+    "file_name": "03- RoHS DoC V2023012303 Envoys.pdf",
+    "doc_type": "manufacturer_self_declaration",
+    "associated_sku": "SKU-PWR-AM1-240",
+    "sku_match_status": "matched",
+    "extracted": {
+      "document_classification": "DECLARATION_OF_CONFORMITY",
+      "certificate_id": "V2023012303",
+      "supplier_name": "Enphase Energy, Inc.",
+      "issuing_lab": null,
+      "accreditation_id": null,
+      "issue_date": null,
+      "expiration_date": null,
+      "covered_part_numbers": [
+        "ENV-IQ-AM1-240",
+        "ENV-S-AM1-230-60",
+        "ENV-S-AB-120-A",
+        "ENV-S-WB-230"
+      ],
+      "standards_tested": [
+        "EN IEC 63000:2018"
+      ],
+      "tested_lead_ppm": 1000.0,
+      "is_statutory_limit": true,
+      "lead_exemption_cited": false,
+      "evidence_links": [
+        {
+          "field_name": "certificate_id",
+          "exact_quote": "Certificate number: V2023012303",
+          "page_number": 1,
+          "section": "RoHS EC DECLARATION OF CONFORMITY"
+        },
+        {
+          "field_name": "supplier_name",
+          "exact_quote": "Enphase Energy, Inc.",
+          "page_number": 1,
+          "section": "RoHS EC DECLARATION OF CONFORMITY"
+        },
+        {
+          "field_name": "covered_part_numbers",
+          "exact_quote": "ENV-IQ-AM1-240, ENV-S-AM1-230-60, ENV-S-AB-120-A, ENV-S-WB-230",
+          "page_number": 1,
+          "section": "RoHS EC DECLARATION OF CONFORMITY"
+        },
+        {
+          "field_name": "standards_tested",
+          "exact_quote": "Standard: EN IEC 63000:2018",
+          "page_number": 1,
+          "section": "RoHS EC DECLARATION OF CONFORMITY"
+        },
+        {
+          "field_name": "tested_lead_ppm",
+          "exact_quote": "Lead (Pb) 1000",
+          "page_number": 1,
+          "section": "RoHS restricted substance Concentration limit (ppm)1"
+        }
+      ]
+    }
+  }
+]

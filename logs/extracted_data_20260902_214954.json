@@ -1,0 +1,66 @@
+[
+  {
+    "file_name": "Cubot KingKong 3 Smartphone \u2014 RoHS Lab Report.pdf",
+    "doc_type": "lab_test_report",
+    "associated_sku": null,
+    "sku_match_status": "unmatched",
+    "extracted": {
+      "document_classification": "LAB_TEST_REPORT",
+      "certificate_id": "AGC00552180804-001",
+      "supplier_name": "Shenzhen Huafurui Technology Co., Ltd.",
+      "issuing_lab": "null",
+      "accreditation_id": "null",
+      "issue_date": "2018-09-06",
+      "expiration_date": null,
+      "covered_part_numbers": [
+        "KINGKONG 3"
+      ],
+      "standards_tested": [
+        "European Directive 2006/66/EC",
+        "2013/56/EU",
+        "EU RoHS Directive 2011/65/EU"
+      ],
+      "tested_lead_ppm": 32599.0,
+      "is_statutory_limit": false,
+      "lead_exemption_cited": true,
+      "evidence_links": [
+        {
+          "field_name": "supplier_name",
+          "exact_quote": "Shenzhen Huafurui Technology Co., Ltd.",
+          "page_number": 1,
+          "section": "Applicant"
+        },
+        {
+          "field_name": "covered_part_numbers",
+          "exact_quote": "Sample Model: KINGKONG 3",
+          "page_number": 1,
+          "section": "Sample"
+        },
+        {
+          "field_name": "issue_date",
+          "exact_quote": "Date: Sep.06, 2018",
+          "page_number": 1,
+          "section": "Report"
+        },
+        {
+          "field_name": "tested_lead_ppm",
+          "exact_quote": "Lead(Pb) mg/kg 32599*",
+          "page_number": 11,
+          "section": "The Test Results of Pb & Cd"
+        },
+        {
+          "field_name": "lead_exemption_cited",
+          "exact_quote": "Lead is exempted as an alloying element in Copper containing up to 4% (40000ppm) by weight.",
+          "page_number": 11,
+          "section": "The Test Results of Pb & Cd"
+        },
+        {
+          "field_name": "standards_tested",
+          "exact_quote": "EU RoHS Directive 2011/65/EU",
+          "page_number": 2,
+          "section": "Test Requested"
+        }
+      ]
+    }
+  }
+]
