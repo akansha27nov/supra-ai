@@ -112,6 +112,18 @@ The rule engine's output is a recommendation, not a final decision. A reviewer a
 
 Every LangGraph run — extraction, reconciliation attempts, rule evaluation — is traced in LangSmith under `LANGCHAIN_PROJECT`, so a reviewer or engineer can inspect exactly what the model saw and produced for any audited document.
 
+### 4.7 Reliability and error handling
+
+Every LLM call in the app — extraction, document classification, reconciliation, and gap-notice drafting — goes through a single shared policy in `agent/llm_reliability.py` rather than a bare `.invoke()`:
+
+- **Transient failures are retried**, not surfaced to the user: rate limits, timeouts, connection errors, and OpenAI 5xx responses get up to 3 attempts with exponential backoff (1s, 2s, 4s).
+- **Failures that a retry can't fix are not retried.** An authentication error (bad API key) is a configuration problem, not a traffic problem — it fails immediately with a message saying so. A structured-output validation failure — typically caused by a low-quality scan or otherwise unparseable document — also fails immediately, since retrying won't make a garbled document parse better on attempt two.
+- **Every failure path ends in one clean, human-readable message** (`ExtractionFailedError`), never a raw stack trace surfaced to the reviewer.
+- **A pre-flight check in `agent/server.py`** rejects PDFs with fewer than 40 extractable characters — the scanned-image-PDF case — with a specific `422` explaining why, before an LLM call is even attempted.
+- **A failed extraction is never persisted as if it succeeded.** `/api/audit` and `/api/gap-notice` both catch `ExtractionFailedError` and return a `502` with the real reason; no row is written to the Postgres audit ledger for a document that never actually finished processing.
+
+This behaviour is covered by `tests/test_llm_reliability.py` — retry-then-succeed, retry-exhaustion, and the two non-retryable paths (auth error, unparseable document) are each asserted directly.
+
 ## 5. Repository structure (MVP-relevant paths)
 
 ```
@@ -214,16 +226,11 @@ The pytest suite covers:
 
 LangSmith tracing can be enabled for any of the above via `LANGCHAIN_TRACING_V2=true`. Every extraction, reconciliation attempt, and rule evaluation is inspectable per run once tracing is on.
 
-## 10. Known limitations
+## 10. Current limitations
 
-- **Two Celestron-related findings, still open:** the live LLM extraction call doesn't reliably parse the one real lab report's scientific-notation lead value (`2.93×10⁴` → should be `29300` ppm), causing that benchmark entry to under-score.
-- **`trace_sample.py` and `agent/graph.py` are two separately maintained rule engines**, not one shared implementation. The benchmark scripts test `trace_sample.py`, not the actual production pipeline the API serves — a rule change in one is not guaranteed to be mirrored in the other.
-- **No retry/error handling on LLM extraction failures** (e.g. a low-quality scan or non-English document) — a genuine parsing failure surfaces as bad data rather than a clean, user-facing error.
-- **No auth.** Any client that can reach the API can call every endpoint. Fine for a local/demo deployment, not for a real pilot with real supplier data.
+- **No dedicated non-English-document detection.** LLM calls retry on transient failures and fail cleanly (via `agent/llm_reliability.py`) rather than returning bad data — see Section 4.7 — but a non-English document that still produces *parseable*, low-quality structured output won't be flagged as such; it just scores whatever the extraction actually returned. A language-detection pass (e.g. `langdetect`) is a scoped next step, not yet built.
+- **No auth.** Any client that can reach the API can call every endpoint. Scoped for MVP.
 - **SKU catalog is a static JSON file** (`data/skus.json` / `data/real_skus.json`), not a live PIM/ERP integration.
-- **CORS is currently open** (`allow_origins=["*"]`) — needs tightening to the deployed frontend origin before any real pilot.
-
-The MVP proves the product and AI flow end to end; it is deliberately not production-hardened yet — see `strategic_plan.md` for what's scoped for the pilot phase.
 
 ## 11. Relationship to the other deliverables
 
