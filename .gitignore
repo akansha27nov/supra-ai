@@ -3,3 +3,4 @@
 langsmith/__pycache__/*.pyc
 agent/__pycache__/*.pyc
 tests/__pycache__/*.pyc
+mvp/frontend/node_modules
