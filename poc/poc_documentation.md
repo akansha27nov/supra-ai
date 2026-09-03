@@ -34,7 +34,7 @@ The original workflow proved that a document could be read by an LLM, scored by 
 
 This is the same underlying hypothesis and the same workflow, extended with the one capability the Round 2 MVP made central: **generating a supplier-facing gap notice from the actual rule-engine findings**, not just alerting that a problem exists.
 
-A new node, **`Draft Gap Notice`**, was inserted on the high-risk branch between `IF High Risk Router` and `Telegram High-Risk Alert`. It takes the same `flagged_issues` list the rule engine already produces and drafts a short corrective-action email addressed to the supplier, using only the findings that were actually triggered — no invented content. That draft is now included directly in the Telegram alert reviewers already receive[, and logged alongside the record in the Notion high-risk queue].
+A new node, **`Draft Gap Notice`**, was inserted on the high-risk branch between `IF High Risk Router` and `Telegram High-Risk Alert`. It takes the same `flagged_issues` list the rule engine already produces and drafts a short corrective-action email addressed to the supplier, using only the findings that were actually triggered — no invented content. That draft is now included directly in the Telegram alert reviewers already receive. It is not additionally logged as a separate Notion property — the `Notion High-Risk Queue` record still carries the same fields it did in Round 1 (Supplier, Priority Score, Flagged Issues, Status). Telegram is the only place the draft itself is visible in this POC; adding a dedicated Notion field for it was considered but left out to keep the change small and focused on proving the drafting step works.
 
 This mirrors, at POC scale, the Gap Notice lifecycle built out fully in the Round 2 MVP (draft → edit → approve → send, backed by real persistence and an audit trail). The POC does not attempt that full lifecycle — it shows the single most representative new capability: **turning a rule violation into a draft corrective-action communication automatically**, which is the piece that was entirely absent in Round 1.
 
@@ -87,7 +87,9 @@ Everything else in the workflow (extraction, SKU matching, rule scoring, Notion 
 
 **Existing nodes modified:**
 - `Telegram High-Risk Alert` — message template now includes the drafted gap notice.
-- [`Notion High-Risk Queue` — added a `Gap Notice Draft` rich-text property, if implemented.]
+
+**Existing nodes unchanged (including a deliberate non-change):**
+- `Notion High-Risk Queue` — schema and properties are exactly as in Round 1. The draft was intentionally not added here; see Section 3 for why.
 
 All other nodes are unchanged from the Round 1 workflow.
 
@@ -122,7 +124,7 @@ Carried over from Round 1:
 - Priority-scoring thresholds are illustrative, not calibrated against historical outcomes.
 
 New limits specific to the gap-notice capability:
-- **The draft is never persisted, edited, approved, or sent from here.** It exists only inside a Telegram message[/Notion field] for a single run. The full lifecycle (persist → human edit → approve → send, with an audit trail and status tracking) is what the Round 2 MVP actually implements — the POC intentionally only proves the drafting step works, not the full workflow around it.
+- **The draft is never persisted, edited, approved, or sent from here.** It exists only inside a Telegram message for a single run. The full lifecycle (persist → human edit → approve → send, with an audit trail and status tracking) is what the Round 2 MVP actually implements — the POC intentionally only proves the drafting step works, not the full workflow around it.
 - **No structured evidence linkage.** The MVP's Gap Notice carries the exact quote, page number, and section behind each finding; this POC's draft is generated from the flat `flagged_issues` text only, with no page/quote traceability.
 - **No document-type branching.** The POC does not distinguish a lab report from a declaration of conformity the way the MVP's rule engine does; it applies one rule set regardless of document type.
 - **Single-supplier, single-document assumption.** No handling for a supplier with multiple concurrent open gap notices.
@@ -131,7 +133,7 @@ New limits specific to the gap-notice capability:
 
 1. Import `poc/workflow_round2.json` into n8n (this is the updated Round 2 export; the original Round 1 workflow remains at `n8n/Supra AI - PDF-Only Compliance Document Auditor.json`, unmodified, for comparison).
 2. Configure credentials: OpenAI API key, Notion integration token (with access to the target database), Telegram bot token + chat ID.
-3. Set the Notion database ID in each Notion node to a database with at minimum: a title property (Certificate ID), `Supplier` (rich text), `Priority Score` (number), `Status` (status/select), `Flagged Issues` (rich text)[, `Gap Notice Draft` (rich text) if that property was added].
+3. Set the Notion database ID in each Notion node to a database with at minimum: a title property (Certificate ID), `Supplier` (rich text), `Priority Score` (number), `Status` (status/select), `Flagged Issues` (rich text). No additional Notion property is required for the gap-notice draft — it is only surfaced in Telegram.
 4. Activate the form trigger and upload a sample certificate PDF that will score ≥ 50 (e.g. one with a missing standard or an expired certificate) to exercise the new node.
 5. Inspect the `Draft Gap Notice` node's output in the execution log, and confirm the drafted email appears in the resulting Telegram message.
 
