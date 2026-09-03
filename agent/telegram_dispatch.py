@@ -1,20 +1,5 @@
 # agent/telegram_dispatch.py
 """Telegram notification for gap-notice lifecycle events.
-
-Reuses the exact Bot API pattern already proven working in the Round 1 n8n
-POC (see n8n/Supra AI - PDF-Only Compliance Document Auditor.json, the
-"Telegram High-Risk Alert" node): a plain HTTP POST to the Bot API's
-sendMessage endpoint with Markdown parse_mode. This module calls that same
-endpoint directly instead of going through n8n, using the TELEGRAM_BOT_TOKEN
-/ TELEGRAM_CHAT_ID env vars already scaffolded in .env.example.
-
-IMPORTANT — what this is and isn't:
-This notifies an internal Telegram chat (a reviewer/ops channel) that a gap
-notice was marked SENT in Supra AI. It does NOT deliver anything to the
-supplier. There is still no supplier-facing email/SMTP/SendGrid integration
-anywhere in this codebase (AC-17 #8) -- that remains a separate, explicitly
-lower-priority gap. Treat a successful call here as "the team was notified",
-never as "the supplier was notified".
 """
 from __future__ import annotations
 

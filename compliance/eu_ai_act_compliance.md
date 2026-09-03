@@ -725,7 +725,58 @@ A new AI Act assessment is required before implementing any of the following:
 
 ---
 
-# 25. Final Compliance Position
+# 25. Conformity Summary
+
+> **This section summarises the system's current conformity position. It is not a declaration of conformity, and no notified-body or third-party conformity assessment has been carried out or is currently claimed.**
+
+## 25.1 Current position
+
+No formal EU declaration of conformity, CE marking under the AI Act, or third-party conformity assessment is currently required for Supra AI, because the documented intended purpose has not been identified as a prohibited practice, an Annex I safety-component high-risk system, or an Annex III high-risk use case (see the classification assessment above).
+
+Where no high-risk classification applies, the AI Act does not require a formal conformity-assessment procedure or a declaration of conformity for that system. This position is conditional on the intended purpose, users, data, and deployment environment remaining as documented, and must be reassessed against the reclassification triggers listed below.
+
+## 25.2 Conformity-relevant controls already in place
+
+Although a formal conformity assessment is not currently required, several controls already exist in the MVP that are directly relevant to the kinds of requirements a future conformity assessment would examine if the system were later classified as high-risk:
+
+| Future conformity-assessment concern | Current MVP evidence |
+|---|---|
+| Accuracy and performance measurement | Ground-truth benchmark evaluation (synthetic and real-world documents), field-level accuracy reporting |
+| Robustness | Bounded reconciliation retries, explicit ambiguous/unresolved states, human-review escalation rather than silent failure |
+| Human oversight | Mandatory human review for flagged/ambiguous/rejected outcomes; AI output never presented as a final decision |
+| Traceability / explainability | Evidence-linked findings (exact quote, page, section) carried through the rule engine, ledger, and (as of this update) the gap-notice record |
+| Record-keeping | LangSmith tracing of workflow execution; CSV audit ledger with full violation and evidence detail |
+| Risk management thinking | Documented AI Act risk register (Section 21) and reclassification triggers (Section 24) |
+
+This table should not be read as a claim that formal conformity requirements have been satisfied — none currently apply. It is included to show that the MVP's design choices are already broadly aligned with the kind of evidence a future conformity assessment would ask for, which reduces (but does not eliminate) the work required if the system is later reclassified.
+
+## 25.3 What would change this position
+
+A formal conformity-assessment procedure and EU declaration of conformity would become mandatory before deployment of any functionality that triggers a high-risk classification (see Section 24, Reclassification Triggers). The applicable route (internal control vs. third-party/notified-body assessment) depends on which Annex I or Annex III pathway applies and must be determined at that time — it is not pre-judged here.
+
+---
+
+# 26. Technical Documentation Outline
+
+> **This is an outline of the technical documentation categories a high-risk AI system would need under the AI Act's technical documentation requirements (Annex IV), mapped against what currently exists for the Supra AI MVP. It is provided as a readiness outline, not as evidence that full technical documentation has been produced — the current system does not require it, since no high-risk classification currently applies.**
+
+| Documentation category (paraphrased from Annex IV) | What it typically covers | Current MVP status |
+|---|---|---|
+| General system description | Intended purpose, provider, versions, how the system interacts with other software/hardware, forms in which it is placed on the market | Documented in Sections 2–3 of this assessment |
+| Design and development description | Architecture, design specifications, key design choices, algorithms/methodology used | Partially documented — repository architecture (extraction → SKU matching → deterministic rules → evidence → human review) described in Section 2; no standalone architecture document yet |
+| Data and data-governance description | Training/validation/testing data, provenance, labelling, known limitations | Partially documented — ground-truth evaluation set and ledger schema exist; no formal data-governance document |
+| Monitoring, functioning and control information | System capabilities and limitations, expected accuracy/performance metrics, foreseeable misuse | Partially documented — benchmark results, documented limitations, out-of-scope uses (Section 3) |
+| Risk-management system description | Identified risks, mitigations, residual risk | Present — AI Act risk register (Section 21) and the separate ROI/risk assessment's risk matrix |
+| Lifecycle change log | Material changes to the system, model, or intended purpose over time | Not yet formalised — would need a change log distinct from git history once in production |
+| Standards / conformity solutions applied | Harmonised standards applied, or the solutions used to meet applicable requirements where no standard exists | Not applicable while no high-risk classification applies; would need to be identified before any future conformity assessment |
+| Declaration of conformity (copy) | The EU declaration of conformity itself, where applicable | Not applicable — no declaration currently required or produced |
+| Post-market monitoring plan | How the system will be monitored after deployment, including incident handling | Partially addressed — Section 18 (Vendor and Subprocessor Governance) and the pilot validation plan in the ROI/risk assessment cover some of this; no standalone post-market monitoring plan yet |
+
+This outline should be revisited and expanded into full technical documentation before any deployment that triggers a high-risk classification, rather than being treated as complete for the current MVP.
+
+---
+
+# 27. Final Compliance Position
 
 > **Current assessment: Supra AI is an AI system whose documented MVP use has not been identified as a prohibited AI practice, an Annex I safety-component high-risk system, or an Annex III high-risk use case.**
 

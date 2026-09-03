@@ -549,23 +549,58 @@ A DPIA should be completed where the planned processing is likely to result in a
 
 The EDPB states that controllers must carry out a DPIA before processing where the processing is likely to result in high risk.
 
-For the current Supra AI MVP, the intended workflow is relatively narrow:
+## 19.1 Screening method
 
-- Supplier compliance documents
-- Primarily business/product information
-- Limited personal-data processing
-- No intended special-category processing
-- No intended profiling of individuals
-- Human final decision-making
-- No intended automated decisions concerning individuals
+Rather than asserting a conclusion, this section applies the nine-criteria screening approach originally set out by the Article 29 Working Party (WP248) and carried forward in EDPB guidance. Meeting two or more criteria is generally treated as an indicator that a DPIA is required; meeting one criterion may still warrant a DPIA depending on context.
 
-This **does not automatically mean that a DPIA is unnecessary**.
+| # | Criterion | Applies to Supra AI? | Reasoning |
+|---:|---|---|---|
+| 1 | Evaluation or scoring | **No** | The rule engine scores *documents* against compliance policy, not individuals. No natural person is scored, profiled, or rated. |
+| 2 | Automated decision-making with legal or similarly significant effect | **No** | Flagged/rejected/human-review outcomes always route to a human reviewer for the final decision; the system does not itself produce a decision with legal or similarly significant effect on a person. |
+| 3 | Systematic monitoring | **No** | The system processes documents submitted for screening; it does not observe or track individuals' behaviour over time. |
+| 4 | Sensitive data or data of a highly personal nature | **No (by design)** | No special-category data (Article 9) is an intended input. Documents may incidentally contain a named individual's business contact details or signature, which is personal but not special-category. |
+| 5 | Data processed on a large scale | **Partially / scale-dependent** | Current MVP volume is small. A production deployment processing supplier documentation across a large SKU catalogue and many suppliers could approach a scale worth reassessing; this depends on the actual customer's document volume. |
+| 6 | Matching or combining datasets | **Limited** | The system matches extracted *product/part identifiers* against an internal SKU catalogue. It does not match or combine personal-data datasets from different sources. |
+| 7 | Data concerning vulnerable data subjects | **No** | Data subjects are business contacts (supplier employees/representatives) in a professional capacity, not a recognised vulnerable category. |
+| 8 | Innovative use of technology | **Yes** | The system uses an LLM for document extraction, which the EDPB has previously flagged as the kind of technology innovation criterion 8 is meant to capture, independent of whether the other criteria are met. |
+| 9 | Prevents data subjects from exercising a right or using a service | **No** | The processing does not gate any individual's access to a right or service. |
 
-The controller must perform and document a DPIA screening assessment against the actual production processing, applicable supervisory-authority requirements, scale, technologies, data categories, and risks.
+**Criteria met: 1 of 9 (criterion 8), with criterion 5 as scale-dependent and worth re-screening at production volume.**
 
-If the assessment identifies likely high risk that cannot be sufficiently mitigated, a full DPIA should be completed before processing begins.
+## 19.2 Highest-risk processing activity identified
 
-As of 2026, the EDPB has also published a DPIA template for consultation/use as part of its work to harmonise DPIA reporting.
+Within the Supra AI workflow, the single processing step carrying the most (if still limited) personal-data risk is:
+
+> **LLM-based extraction of structured fields from uploaded supplier documents, where a document may incidentally contain a named individual's business contact details, job title, or signature (e.g. a lab report signed by a named quality manager).**
+
+This is the highest-risk step because it is the only point where personal data that may be present in a document is read and processed by a third-party AI model, rather than by deterministic, auditable code.
+
+## 19.3 Light DPIA-style assessment of that activity
+
+This is a lightweight, MVP-stage assessment of the identified highest-risk activity, not a substitute for a full DPIA. It should be superseded by a full DPIA if the Section 19.1 screening is re-run at production scale and meets the two-criteria threshold.
+
+| DPIA element | Assessment |
+|---|---|
+| **Nature of processing** | Automated extraction of structured fields (supplier name, dates, standards, chemical values, and incidentally any named individual, signature, or contact detail present) from an uploaded PDF, via an LLM API call. |
+| **Necessity and proportionality** | Necessary to the stated purpose (compliance screening); the system does not request personal data beyond what is incidentally present in the source document, and does not extract fields intended to profile the named individual themselves. |
+| **Risks to individuals** | (a) An individual's name/contact detail is sent to a third-party LLM provider for processing; (b) incidental personal data could be retained longer than necessary in logs or the audit ledger; (c) extraction error could misattribute a compliance finding to the wrong named individual. |
+| **Likelihood and severity** | Likelihood: low-to-moderate (depends on how often source documents name individuals rather than only companies). Severity: low, given the data is limited to professional contact information, not special-category or financial data. |
+| **Mitigating measures already in place or planned** | Data minimisation (Section 6); no special-category data requested; human review before any downstream action; documented retention controls (Section 12); vendor/subprocessor governance for the LLM provider (Section 16). |
+| **Residual risk after mitigation** | Low, for the current MVP scope and document volume. Should be re-assessed if document volume, data categories, or automation level change materially. |
+
+## 19.4 Conclusion and trigger for a full DPIA
+
+Based on the Section 19.1 screening, the current Supra AI MVP does not meet the two-criteria threshold commonly used to require a full DPIA, and the Section 19.3 light assessment does not identify unmitigated high risk at current scale.
+
+This conclusion is **specific to the current MVP scope and volume** and is not a standing exemption. A full DPIA must be carried out (not merely re-screened) if any of the following occur:
+
+- Document volume or supplier count grows to a scale that changes the criterion 5 assessment above;
+- The system begins processing any special-category data;
+- The system begins making or materially influencing decisions about individuals (rather than about documents/products);
+- A new automated matching/combination of personal-data sources is introduced; or
+- Any other criterion in the Section 19.1 table changes from "No" to "Yes" or "Partially" to "Yes".
+
+As of 2026, the EDPB has also published a DPIA template for consultation/use as part of its work to harmonise DPIA reporting; that template should be used for any full DPIA triggered by the above.
 
 ---
 
