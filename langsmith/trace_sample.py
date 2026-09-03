@@ -170,11 +170,6 @@ def screen_certificate(
         )
         screening_priority_score = max(screening_priority_score, SEVERITY["NO_SKU_MATCH"])
         status = "FLAGGED"
-        return {
-            "status": status,
-            "screening_priority_score": screening_priority_score,
-            "flagged_issues": flagged_issues,
-        }
 
     # 2. Mandatory Standards Verification (Critical vs Non-Critical Split)
     if sku_record:

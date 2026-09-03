@@ -294,6 +294,52 @@ def test_screen_certificate_rejects_expired_document():
     assert result["screening_priority_score"] == 90
 
 
+def test_screen_certificate_still_checks_lead_threshold_when_sku_unmatched():
+    """Regression test: an unmatched SKU must not short-circuit the rest of
+    the checks. Previously screen_certificate() returned immediately on an
+    unmatched SKU, so a document with a genuinely dangerous measured lead
+    value but an unmatched SKU would score FLAGGED/50 instead of REJECTED --
+    diverging from the production rule engine (agent/graph.py's
+    rule_engine_node), which falls back to DEFAULT_LEAD_PPM_THRESHOLD and
+    still evaluates the lead check even when the SKU is unmatched."""
+    extracted = {
+        "document_classification": "LAB_TEST_REPORT",
+        "issuing_lab": "Test Lab",
+        "lab_accreditation_id": "DAKKS-12345",
+        "issue_date": "2026-01-01",
+        "covered_part_numbers": ["SOME-PART"],
+        "chemical_data": {"tested_lead_ppm": 29300, "is_statutory_limit": False},
+    }
+    catalog = {"SKU-OTHER": {"max_lead_concentration_ppm": 1000, "mandatory_standards": []}}
+
+    result = screen_certificate(extracted, "SKU-DOES-NOT-EXIST", catalog, ref_date_str="2026-08-31")
+
+    assert result["status"] == "REJECTED"
+    assert any("No matching SKU" in issue for issue in result["flagged_issues"])
+    assert any("exceeds threshold" in issue for issue in result["flagged_issues"])
+
+
+def test_screen_certificate_unmatched_sku_alone_still_just_flags():
+    """Companion to the regression test above: an unmatched SKU with an
+    otherwise clean document should still just be FLAGGED/50, not escalate
+    for no reason -- the fix must not over-trigger."""
+    extracted = {
+        "document_classification": "DECLARATION_OF_CONFORMITY",
+        "issue_date": "2026-08-01",
+        "covered_part_numbers": ["SOME-PART"],
+        "chemical_data": {"tested_lead_ppm": None, "is_statutory_limit": True},
+    }
+    catalog = {"SKU-OTHER": {}}
+
+    result = screen_certificate(extracted, "SKU-DOES-NOT-EXIST", catalog, ref_date_str="2026-08-31")
+
+    assert result["status"] == "FLAGGED"
+    assert result["screening_priority_score"] == 50
+    assert result["flagged_issues"] == [
+        "WARNING: No matching SKU found in catalog — mandatory standards could not be verified"
+    ]
+
+
 def test_extract_pdf_text_reads_all_pages(tmp_path):
     pytest.importorskip("reportlab")
 
