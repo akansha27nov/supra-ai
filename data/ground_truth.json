@@ -7,15 +7,15 @@
       "certificate_id": "ROHS-CN-2022-10492",
       "supplier_name": "Shenzhen Shentech Electronics Co., Ltd.",
       "issuing_lab": "SGS-CSTC Standards Technical Services Co., Ltd.",
-      "lab_accreditation_id": "CNAS-L0641",
       "issue_date": "2022-01-10",
       "expiration_date": "2025-01-09",
-      "standards_found": [
+      "tested_lead_ppm": 450,
+      "covered_part_numbers": [],
+      "accreditation_id": "CNAS-L0641",
+      "standards_tested": [
         "CE Directive 2014/30/EU",
         "RoHS Directive 2011/65/EU"
-      ],
-      "tested_lead_ppm": 450,
-      "covered_part_numbers": ["SKU-ELEC-8812"]
+      ]
     },
     "expected_audit_result": {
       "status": "REJECTED",
@@ -34,16 +34,16 @@
       "certificate_id": "RED-EU-2026-88102",
       "supplier_name": "AudioTech Solutions HK Ltd.",
       "issuing_lab": "DEKRA Testing and Certification GmbH",
-      "lab_accreditation_id": "DAT-P-029/97-01",
       "issue_date": "2026-01-15",
       "expiration_date": "2029-01-14",
-      "standards_found": [
+      "tested_lead_ppm": 320,
+      "covered_part_numbers": [],
+      "accreditation_id": "DAT-P-029/97-01",
+      "standards_tested": [
         "RED Directive 2014/53/EU",
         "RoHS Directive 2011/65/EU",
         "EN 62368-1:2020"
-      ],
-      "tested_lead_ppm": 320,
-      "covered_part_numbers": ["SKU-ELEC-9001"]
+      ]
     },
     "expected_audit_result": {
       "status": "PASS",
@@ -59,15 +59,15 @@
       "certificate_id": "CE-CN-2025-55109",
       "supplier_name": "Guangzhou Wearable Tech Co., Ltd.",
       "issuing_lab": "Eurofins Product Testing",
-      "lab_accreditation_id": "DAKKS-D-PL-14031-01-00",
       "issue_date": "2025-09-01",
       "expiration_date": "2028-08-31",
-      "standards_found": [
+      "tested_lead_ppm": 510,
+      "covered_part_numbers": [],
+      "accreditation_id": "DAKKS-D-PL-14031-01-00",
+      "standards_tested": [
         "CE Directive 2014/30/EU",
         "RoHS Directive 2011/65/EU"
-      ],
-      "tested_lead_ppm": 510,
-      "covered_part_numbers": ["SKU-ELEC-9002"]
+      ]
     },
     "expected_audit_result": {
       "status": "FLAGGED",
@@ -85,15 +85,15 @@
       "certificate_id": "ROHS-FAIL-2026-901",
       "supplier_name": "PowerMax Energy Ltd.",
       "issuing_lab": "Intertek Testing Services China",
-      "lab_accreditation_id": "CNAS-L0182",
       "issue_date": "2026-03-10",
       "expiration_date": "2028-03-09",
-      "standards_found": [
+      "tested_lead_ppm": 1450,
+      "covered_part_numbers": [],
+      "accreditation_id": "CNAS-L0182",
+      "standards_tested": [
         "CE Directive 2014/30/EU",
         "RoHS Directive 2011/65/EU"
-      ],
-      "tested_lead_ppm": 1450,
-      "covered_part_numbers": ["SKU-ELEC-9003"]
+      ]
     },
     "expected_audit_result": {
       "status": "REJECTED",
@@ -112,16 +112,16 @@
       "certificate_id": "CERT-FAKE-99042",
       "supplier_name": "Apex Display Systems Inc.",
       "issuing_lab": "Global Fast Certs Ltd (Unrecognized)",
-      "lab_accreditation_id": "FAKE-ACC-000",
       "issue_date": "2026-05-01",
       "expiration_date": "2029-05-01",
-      "standards_found": [
+      "tested_lead_ppm": 210,
+      "covered_part_numbers": [],
+      "accreditation_id": "FAKE-ACC-000",
+      "standards_tested": [
         "CE Directive 2014/35/EU",
         "CE Directive 2014/30/EU",
         "RoHS Directive 2011/65/EU"
-      ],
-      "tested_lead_ppm": 210,
-      "covered_part_numbers": ["SKU-ELEC-9004"]
+      ]
     },
     "expected_audit_result": {
       "status": "REJECTED",
@@ -139,15 +139,15 @@
       "certificate_id": "CE-EU-2023-11029",
       "supplier_name": "Dongguan Peripheral Cables Co.",
       "issuing_lab": "Bureau Veritas Consumer Products",
-      "lab_accreditation_id": "DAKKS-D-PL-12003-01-00",
       "issue_date": "2023-09-15",
       "expiration_date": "2026-09-15",
-      "standards_found": [
+      "tested_lead_ppm": 390,
+      "covered_part_numbers": [],
+      "accreditation_id": "DAKKS-D-PL-12003-01-00",
+      "standards_tested": [
         "CE Directive 2014/30/EU",
         "RoHS Directive 2011/65/EU"
-      ],
-      "tested_lead_ppm": 390,
-      "covered_part_numbers": ["SKU-ELEC-9005"]
+      ]
     },
     "expected_audit_result": {
       "status": "FLAGGED",
@@ -165,16 +165,16 @@
       "certificate_id": "RED-DE-2026-00418",
       "supplier_name": "SoundHome Audio GmbH",
       "issuing_lab": "TUV SUD Product Service GmbH",
-      "lab_accreditation_id": "DAT-P-022/95-00",
       "issue_date": "2026-04-10",
       "expiration_date": "2029-04-09",
-      "standards_found": [
+      "tested_lead_ppm": 180,
+      "covered_part_numbers": [],
+      "accreditation_id": "DAT-P-022/95-00",
+      "standards_tested": [
         "RED Directive 2014/53/EU",
         "RoHS Directive 2011/65/EU",
         "ErP Directive 2009/125/EC"
-      ],
-      "tested_lead_ppm": 180,
-      "covered_part_numbers": ["SKU-ELEC-9006"]
+      ]
     },
     "expected_audit_result": {
       "status": "PASS",

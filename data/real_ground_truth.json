@@ -16,7 +16,13 @@
       "chemical_data": {
         "tested_lead_ppm": null,
         "is_statutory_limit": true
-      }
+      },
+      "accreditation_id": null,
+      "standards_tested": [
+        "2011/65/EU",
+        "2015/863/EU",
+        "EN IEC 63000:2018"
+      ]
     },
     "expected_audit_result": {
       "status": "FLAGGED",
@@ -40,7 +46,13 @@
       "chemical_data": {
         "tested_lead_ppm": null,
         "is_statutory_limit": true
-      }
+      },
+      "accreditation_id": null,
+      "standards_tested": [
+        "2011/65/EU",
+        "2015/863/EU",
+        "EN IEC 63000:2018"
+      ]
     },
     "expected_audit_result": {
       "status": "FLAGGED",
@@ -62,7 +74,13 @@
       "chemical_data": {
         "tested_lead_ppm": null,
         "is_statutory_limit": true
-      }
+      },
+      "accreditation_id": null,
+      "standards_tested": [
+        "2011/65/EU",
+        "2015/863/EU",
+        "2017/2102/EU"
+      ]
     },
     "expected_audit_result": {
       "status": "FLAGGED",
@@ -81,11 +99,17 @@
       "certificate_id": null,
       "supplier_name": "Apogee Instruments, Inc.",
       "issue_date": "2025-06-01",
-      "covered_part_numbers": ["APOGEE-GENERIC-SERIES"],
+      "covered_part_numbers": [],
       "chemical_data": {
         "tested_lead_ppm": null,
         "is_statutory_limit": true
-      }
+      },
+      "accreditation_id": null,
+      "standards_tested": [
+        "2011/65/EU",
+        "2015/863/EU",
+        "1907/2006"
+      ]
     },
     "expected_audit_result": {
       "status": "PASS",
@@ -109,7 +133,12 @@
       "chemical_data": {
         "tested_lead_ppm": null,
         "is_statutory_limit": true
-      }
+      },
+      "accreditation_id": null,
+      "standards_tested": [
+        "2011/65/EU",
+        "2015/863/EU"
+      ]
     },
     "expected_audit_result": {
       "status": "PASS",
@@ -118,7 +147,7 @@
     }
   },
   {
-    "file_name": "Celestron Smartphone Adapter — RoHS Lab Report.pdf",
+    "file_name": "Celestron Smartphone Adapter \u2014 RoHS Lab Report.pdf",
     "associated_sku": "...",
     "expected_extraction": {
       "document_classification": "LAB_REPORT",

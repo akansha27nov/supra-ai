@@ -4,34 +4,39 @@
     "name": "Enphase Microinverter / Envoy",
     "category": "Solar / Inverters",
     "max_lead_concentration_ppm": 1000,
-    "mandatory_standards": ["Directive 2011/65/EU"]
+    "mandatory_standards": ["Directive 2011/65/EU"],
+    "covered_part_numbers": ["ENV-IQ-AM1-240", "ENV-S-AM1-230-60", "ENV-S-AB-120-A", "ENV-S-WB-230"]
   },
   {
     "sku": "SKU-DRV-ACH480",
     "name": "ABB ACH480 Frequency Converter",
     "category": "Drives",
     "max_lead_concentration_ppm": 1000,
-    "mandatory_standards": ["Directive 2011/65/EU"]
+    "mandatory_standards": ["Directive 2011/65/EU"],
+    "covered_part_numbers": ["ACH480-04"]
   },
   {
     "sku": "SKU-ACT-CON-REV2",
     "name": "Concens Electric Actuator",
     "category": "Actuators",
     "max_lead_concentration_ppm": 1000,
-    "mandatory_standards": ["Directive 2011/65/EU"]
+    "mandatory_standards": ["Directive 2011/65/EU"],
+    "covered_part_numbers": []
   },
   {
     "sku": "SKU-SEN-APO-PROP",
     "name": "Apogee Environmental Sensor",
     "category": "Sensors",
     "max_lead_concentration_ppm": 1000,
-    "mandatory_standards": ["Directive 2011/65/EU"]
+    "mandatory_standards": ["Directive 2011/65/EU"],
+    "covered_part_numbers": []
   },
   {
     "sku": "SKU-IOT-DLT-UNO",
     "name": "UNOnext Indoor Air Quality Monitor",
     "category": "IoT",
     "max_lead_concentration_ppm": 1000,
-    "mandatory_standards": ["Directive 2011/65/EU"]
+    "mandatory_standards": ["Directive 2011/65/EU"],
+    "covered_part_numbers": ["UNO-C01X001", "UNO-C07X011", "UNO-C01X000"]
   }
 ]
