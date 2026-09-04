@@ -21,6 +21,8 @@ Live here: [supra-ai](https://supra-ai.netlify.app/)
 | Backend | Render (FastAPI, `agent/server.py`) | LangGraph extraction + rule-engine pipeline |
 | Database | Render Postgres | Audit ledger (`audit_ledger`) + gap-notice records (`gap_notices`), via `agent/db.py` |
 
+**Presentation Deck:** [docs/Supra_AI_Presentation.pdf](docs/Supra_AI_Presentation.pdf)
+
 ## What the MVP does
 
 A reviewer uploads a supplier compliance PDF (Declaration of Conformity or lab test report). The system:
