@@ -10,7 +10,7 @@
 
 **Solution shape:** an AI-assisted screening layer that extracts structured data from supplier certificates, checks it against deterministic compliance rules and the internal SKU catalog, and surfaces prioritised, evidence-linked findings on a dashboard for human reviewers. The AI extracts; a transparent, auditable rule engine decides; a human approves.
 
-**Round 1 decision:** KEEP — proceed to Round 2 with the existing architecture as the baseline (see `feedback/round1_decision.md`).
+**Round 1 decision:** KEEP — proceed to Round 2 with the existing architecture as the baseline (see [feedback/round1_decision.md](feedback/round1_decision.md)).
 
 ## Live MVP
 
@@ -35,7 +35,7 @@ A reviewer uploads a supplier compliance PDF (Declaration of Conformity or lab t
 6. Sends a best-effort internal Telegram notification when a gap notice is marked sent.
 7. Provides an audit-scoped Copilot Chat that helps reviewers investigate findings, understand supporting evidence, and navigate the audit without changing the underlying compliance decision.
 
-The core AI capability (extraction + rule-based screening) runs end to end against real PDFs, not synthetic mocks. Latest benchmark: 13/13 audit decisions agreeing with labelled ground truth, 95.9% overall extraction accuracy (see `strategic_plan.md`).
+The core AI capability (extraction + rule-based screening) runs end to end against real PDFs, not synthetic mocks. Latest benchmark: 13/13 audit decisions agreeing with labelled ground truth, 95.9% overall extraction accuracy (see [strategic_plan.md](strategic_plan.md)).
 
 ## System Architecture
 
@@ -115,7 +115,7 @@ The core AI capability (extraction + rule-based screening) runs end to end again
                     +--------------------------------------+
 ```
 
-Supra AI runs on a central **LangGraph** deterministic state machine (`agent/graph.py`) that extracts, validates, resolves, and screens supplier compliance documents behind a single FastAPI backend. Check `mvp/mvp_documentation.md` for the full request/response contract.
+Supra AI runs on a central **LangGraph** deterministic state machine (`agent/graph.py`) that extracts, validates, resolves, and screens supplier compliance documents behind a single FastAPI backend. Check [mvp/mvp_documentation.md](mvp/mvp_documentation.md) for the full request/response contract.
 
 - **Entrypoint:**
   * **Next.js reviewer UI** (`mvp/frontend`) — upload a certificate, inspect an audit, review the evidence, act on gap notices.
@@ -210,7 +210,7 @@ cp .env.example .env             # fill in OPENAI_API_KEY and DATABASE_URL at mi
 uvicorn agent.server:app --reload --port 8000
 ```
 
-The API is now at `http://localhost:8000`. `init_db()` creates the Postgres tables automatically on first run if they don't exist — point `DATABASE_URL` at any Postgres instance (local, or Render's).
+The API is locally at `http://localhost:8000`. `init_db()` creates the Postgres tables automatically on first run if they don't exist — point `DATABASE_URL` at any Postgres instance (local, or Render's).
 
 ### Frontend (Next.js)
 
@@ -236,7 +236,7 @@ See `mvp/mvp_documentation.md` for expected pass/fail counts and known pre-exist
 - **Backend → Render (Web Service, Python):** build command `pip install -r requirements.txt`, start command `uvicorn agent.server:app --host 0.0.0.0 --port $PORT`, root directory = repo root (imports are `agent.*`). Set `OPENAI_API_KEY` and `DATABASE_URL` in Render's dashboard, not in a committed file.
 - **Database → Render Postgres:** provision a Render Postgres instance and attach its connection string as `DATABASE_URL` on the backend service. Render sometimes provides `postgres://`; `agent/db.py` normalises this to `postgresql://` for psycopg2.
 
-Full deployment notes, environment variables, and known limitations are in `mvp/mvp_documentation.md`.
+Full deployment notes, environment variables, and known limitations are in [mvp/mvp_documentation.md](mvp/mvp_documentation.md).
 
 ## Other deliverables
 
@@ -251,4 +251,4 @@ Full deployment notes, environment variables, and known limitations are in `mvp/
 
 ## What this project does and does not prove
 
-The MVP demonstrates that the end-to-end concept is feasible, that deterministic policy screening can be separated from AI extraction, that the system runs as a deployed product  against real supplier documents, and that real-world documents reveal failure modes synthetic data alone would not expose. See `mvp/mvp_documentation.md` (Known Limitations) and `strategic_plan.md` for what's scoped next.
+The MVP demonstrates that the end-to-end concept is feasible, that deterministic policy screening can be separated from AI extraction, that the system runs as a deployed product  against real supplier documents, and that real-world documents reveal failure modes synthetic data alone would not expose. See [mvp/mvp_documentation.md](mvp/mvp_documentation.md) (Known Limitations) and [strategic_plan.md](strategic_plan.md) for what's scoped next.
