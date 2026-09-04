@@ -386,84 +386,93 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant flex flex-col gap-2">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant font-label-caps">Extracted Flags</h4>
-                      {auditResult.audit_result?.flags && auditResult.audit_result.flags.length > 0 ? (
-                        <div className="flex flex-col gap-2">
-                          {(auditResult.audit_result.flags as RuleViolationDetail[]).map((violation, idx) => (
-                            <ViolationCard key={`${violation.code}-${idx}`} violation={violation} showEvidence={false} />
-                          ))}
+                  {(() => {
+                    const decision = auditResult.audit_result?.decision;
+                    const needsGapNotice = decision === "REJECTED" || decision === "FLAGGED" || decision === "REQUIRES_HUMAN_REVIEW";
+                    return (
+                      <div className={`grid grid-cols-1 ${needsGapNotice ? 'md:grid-cols-2' : ''} gap-4`}>
+                        <div className="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant flex flex-col gap-2">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant font-label-caps">Extracted Flags</h4>
+                          {auditResult.audit_result?.flags && auditResult.audit_result.flags.length > 0 ? (
+                            <div className="flex flex-col gap-2">
+                              {(auditResult.audit_result.flags as RuleViolationDetail[]).map((violation, idx) => (
+                                <ViolationCard key={`${violation.code}-${idx}`} violation={violation} showEvidence={false} />
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="p-3 bg-surface-container rounded-lg border border-outline-variant text-xs text-on-surface-variant">
+                              No compliance infractions flagged.
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="p-3 bg-surface-container rounded-lg border border-outline-variant text-xs text-on-surface-variant">
-                          No compliance infractions flagged.
-                        </div>
-                      )}
-                    </div>
-                    <div className="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant flex flex-col gap-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant font-label-caps">
-                          Supplier Gap Notice
-                        </h4>
 
-                        <FileText size={16} className="text-primary" />
-                      </div>
+                        {needsGapNotice && (
+                          <div className="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant flex flex-col gap-3">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant font-label-caps">
+                                Supplier Gap Notice
+                              </h4>
 
-                      {!gapNotice ? (
-                        <>
-                          <p className="text-sm text-on-surface leading-relaxed font-body-md">
-                            Generate a draft supplier email explaining the compliance gaps
-                            identified by the audit.
-                          </p>
+                              <FileText size={16} className="text-primary" />
+                            </div>
 
-                          <button
-                            onClick={handleGenerateGapNotice}
-                            disabled={gapNoticeLoading}
-                            className="w-full px-3 py-2 rounded-lg bg-primary text-on-primary text-sm font-medium hover:bg-surface-tint disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                          >
-                            {gapNoticeLoading ? (
+                            {!gapNotice ? (
                               <>
-                                <span className="w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin" />
-                                Generating Draft...
+                                <p className="text-sm text-on-surface leading-relaxed font-body-md">
+                                  Generate a draft supplier email explaining the compliance gaps
+                                  identified by the audit.
+                                </p>
+
+                                <button
+                                  onClick={handleGenerateGapNotice}
+                                  disabled={gapNoticeLoading}
+                                  className="w-full px-3 py-2 rounded-lg bg-primary text-on-primary text-sm font-medium hover:bg-surface-tint disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                  {gapNoticeLoading ? (
+                                    <>
+                                      <span className="w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin" />
+                                      Generating Draft...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FileText size={16} />
+                                      Generate Gap Notice
+                                    </>
+                                  )}
+                                </button>
                               </>
                             ) : (
                               <>
-                                <FileText size={16} />
-                                Generate Gap Notice
+                                <textarea
+                                  value={gapNotice}
+                                  onChange={e => setGapNotice(e.target.value)}
+                                  rows={8}
+                                  className="w-full rounded-lg border border-outline-variant bg-surface-container p-3 text-sm text-on-surface resize-y focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                />
+
+                                <p className="text-[11px] text-on-surface-variant">
+                                  Draft only — review and edit before sending to the supplier.
+                                </p>
+
+                                <button
+                                  onClick={() => setGapNotice(null)}
+                                  className="self-start px-3 py-1.5 rounded-lg border border-outline-variant text-xs font-medium text-on-surface hover:bg-surface-container"
+                                >
+                                  Regenerate
+                                </button>
                               </>
                             )}
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <textarea
-                            value={gapNotice}
-                            onChange={e => setGapNotice(e.target.value)}
-                            rows={8}
-                            className="w-full rounded-lg border border-outline-variant bg-surface-container p-3 text-sm text-on-surface resize-y focus:outline-none focus:ring-2 focus:ring-primary/30"
-                          />
 
-                          <p className="text-[11px] text-on-surface-variant">
-                            Draft only — review and edit before sending to the supplier.
-                          </p>
-
-                          <button
-                            onClick={() => setGapNotice(null)}
-                            className="self-start px-3 py-1.5 rounded-lg border border-outline-variant text-xs font-medium text-on-surface hover:bg-surface-container"
-                          >
-                            Regenerate
-                          </button>
-                        </>
-                      )}
-
-                      {gapNoticeError && (
-                        <p className="text-xs text-error">
-                          {gapNoticeError}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                            {gapNoticeError && (
+                              <p className="text-xs text-error">
+                                {gapNoticeError}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )
               }
