@@ -20,19 +20,31 @@ def is_configured() -> bool:
 
 
 def _format_sent_alert(record: dict[str, Any]) -> str:
+    """Plain-text alert — deliberately NOT Markdown/HTML formatted.
+
+    Every field here (supplier_name, failed_rules, approved_by) originates
+    from parsed supplier documents or the rule engine, not from a fixed,
+    reviewed template. Telegram's Markdown parser treats _, *, `, [ as
+    formatting delimiters; an odd count of any of them anywhere in this
+    message — one unescaped underscore in a single rule code is enough —
+    desyncs the parser for everything after it and the whole send fails
+    with a 400, even though nothing about the content is actually invalid.
+    Plain text has no delimiters to get out of sync, so it can't fail this
+    way regardless of what a future rule code or supplier name contains.
+    """
     failed_rules = record.get("failed_rules") or []
-    issues_block = "\n".join(f"\u2022 {r}" for r in failed_rules) or "\u2022 (none listed)"
+    issues_block = "\n".join(f"- {r}" for r in failed_rules) or "- (none listed)"
 
     return (
-        "\U0001F4E4 *GAP NOTICE SENT*\n\n"
-        f"*Supplier:* {record.get('supplier_name', 'N/A')}\n"
-        f"*Audit ID:* `{record.get('audit_id', 'N/A')}`\n"
-        f"*Notice ID:* `{record.get('notice_id', 'N/A')}`\n"
-        f"*Approved by:* {record.get('approved_by') or 'N/A'}\n\n"
-        f"*Failed Rules:*\n{issues_block}\n\n"
-        "_This confirms the notice was recorded as SENT in Supra AI. "
-        "No supplier-facing email dispatch is wired up yet \u2014 this alert "
-        "is for internal visibility only._"
+        "\U0001F4E4 GAP NOTICE SENT\n\n"
+        f"Supplier: {record.get('supplier_name', 'N/A')}\n"
+        f"Audit ID: {record.get('audit_id', 'N/A')}\n"
+        f"Notice ID: {record.get('notice_id', 'N/A')}\n"
+        f"Approved by: {record.get('approved_by') or 'N/A'}\n\n"
+        f"Failed Rules:\n{issues_block}\n\n"
+        "This confirms the notice was recorded as SENT in Supra AI. "
+        "No supplier-facing email dispatch is wired up yet — this alert "
+        "is for internal visibility only."
     )
 
 
@@ -57,8 +69,7 @@ def send_gap_notice_sent_alert(record: dict[str, Any]) -> dict[str, Any]:
         f"{TELEGRAM_API_BASE}/bot{token}/sendMessage",
         json={
             "chat_id": chat_id,
-            "text": _format_sent_alert(record),
-            "parse_mode": "Markdown",
+            "text": _format_sent_alert(record)
         },
         timeout=10,
     )

@@ -4,7 +4,7 @@ load_dotenv()
 
 import shutil
 from pathlib import Path
-
+import requests
 import pdfplumber
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -362,7 +362,11 @@ async def send_gap_notice_endpoint(notice_id: str):
             telegram_notification = "notified"
         except TelegramNotConfigured:
             telegram_notification = "not_configured"
-        except Exception as exc:  # noqa: BLE001 - best-effort side channel
+        except requests.exceptions.HTTPError as exc:
+            body = exc.response.text if exc.response is not None else ""
+            print(f"[gap-notice] Telegram alert failed for {notice_id}: {exc} | body={body}")
+            telegram_notification = "failed"
+        except Exception as exc:  # noqa: BLE001 - best-effort side channel, covers network/timeout/DNS/etc.
             print(f"[gap-notice] Telegram alert failed for {notice_id}: {exc}")
             telegram_notification = "failed"
 
