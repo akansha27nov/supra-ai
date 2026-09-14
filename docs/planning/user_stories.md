@@ -1,136 +1,224 @@
-# Supra AI Compliance Auditor — User Stories
+# User Stories — Round 2
 
-## 1. Purpose
+## Pilot Scope
 
-These user stories define the business and technical outcomes for the next iteration of the Supra AI Compliance Auditor. The project is decision support for supplier-compliance screening: AI extracts information from supplier documents, while deterministic rules perform the policy screening and a human remains responsible for final review.
+The stories below apply to the agreed pilot product category and its supported document types. The supported document types must match the types actually implemented and represented in the validated ground-truth dataset.
 
-The next iteration expands the current proof of concept from synthetic certificates and five real-world Declarations of Conformity (DoCs) toward a broader document set that also includes real laboratory test reports, supplier gap notices, and a lightweight user interface.
+---
 
-## 2. Personas
+## US-1 — Classify Uploaded Document
 
-- **Compliance Manager** — needs trustworthy extraction and transparent screening results to prioritize human review.
-- **Procurement Specialist / Vendor Manager** — needs clear, actionable supplier-document gaps and corrective-action requests.
-- **Inventory / Product Manager** — needs supplier/manufacturer part numbers connected to internal SKUs so compliance evidence can be evaluated against the correct product.
-- **Reviewer / Auditor** — needs to inspect the source document, extracted fields, rules triggered, and final status before making a decision.
+**As a** compliance reviewer
+**I want** the system to identify the document type before extraction
+**So that** the correct extraction schema is selected.
 
-## 3. Epic 1 — Document Extraction and Classification
+### Acceptance Criteria
 
-### US-1.1 — Extract structured compliance data
+- Given a PDF belonging to a supported pilot document type, the system assigns the correct document type on the agreed validation set with a target accuracy of ≥95%.
+- Given an unsupported or unknown document, the system returns `unrecognized` rather than forcing a known schema.
+- Classification label and confidence are visible before field extraction.
+- Classification is traceable through a document/run ID.
+- Classification does not perform field extraction.
 
-> **As a Compliance Manager, I want supplier PDFs converted into structured JSON, so that compliance information can be screened consistently without manually searching every document.**
+### Out of Scope
 
-**Acceptance criteria**
+- Field extraction → US-2
+- Handling incomplete/malformed documents → US-3
+- Reviewer routing → US-4
 
-- Given a PDF containing a compliance declaration or laboratory report, when the extraction workflow runs, then it returns the agreed schema including document classification, supplier, dates, standards, covered part numbers where stated, and chemical data where applicable.
-- Given a document where a field is genuinely not stated, when extraction runs, then the field is represented as `null` rather than invented.
-- Given a document with a field that is not applicable to its document type, when extraction runs, then the workflow records that state explicitly and does not treat it as a parsing failure.
-- Given malformed or incomplete source text, when extraction cannot confidently resolve a field, then the workflow produces an explicit unresolved/ambiguous state and can route the document to human review.
+**Story points:** 3
+**Dependency:** None
+**Owning code:** `agent/graph.py::classify_doc_type_node`
+**Tests:** `tests/test_graph_routing.py`, `tests/test_graph_validation.py`
 
-### US-1.2 — Classify document type
+---
 
-> **As a Compliance Manager, I want the system to distinguish a manufacturer Declaration of Conformity from a laboratory test report, so that the correct expectations are applied to each document type.**
+## US-2 — Extract Evidence-Linked Structured Fields
 
-**Acceptance criteria**
+**As a** compliance reviewer
+**I want** mandatory fields extracted from a correctly classified document
+**So that** I can review structured information instead of manually reading the entire PDF.
 
-- Given a manufacturer self-declaration, when classified, then the document is identified as `DECLARATION_OF_CONFORMITY`.
-- Given a laboratory testing document, when classified, then the document is identified as `LAB_TEST_REPORT`.
-- Given an unknown document type, when classification is uncertain, then the system does not guess and routes the document for review.
-- A self-declaration without a laboratory accreditation ID must not automatically be treated as an unaccredited laboratory report.
+### Acceptance Criteria
 
-### US-1.3 — Distinguish legal thresholds from measured results
+- Given a document correctly classified by US-1, the system applies the appropriate schema.
+- Mandatory fields are extracted where the information is present.
+- Each extracted field contains a confidence value.
+- Each field surfaced to the reviewer contains evidence linking it to the source document.
+- Extraction output validates against the document-type JSON schema.
+- Missing, ambiguous or uncertain fields are represented explicitly rather than fabricated.
+- Field-level accuracy is measured against the agreed ground-truth dataset.
 
-> **As an Auditor, I want the system to distinguish a statutory/legal chemical limit from an actual measured laboratory result, so that a legal threshold is never mistaken for test evidence.**
+### Out of Scope
 
-**Acceptance criteria**
+- Document classification → US-1
+- Failure detection/routing → US-3
+- Compliance decision logic → existing deterministic rule engine
+- Human review workflow → US-4
 
-- Given a RoHS document containing a `1000 ppm` legal threshold but no measured lead result, when extracted, then `is_statutory_limit` is `true` and `tested_lead_ppm` remains `null`.
-- Given a laboratory report containing an actual measured lead concentration, when extracted, then the measured value is stored as `tested_lead_ppm` and is not labeled as merely a statutory limit.
-- Given an ambiguous chemical value, when the targeted reconciliation step cannot resolve its meaning, then the document is routed to human review rather than assigned a confident value.
+**Story points:** 5
+**Dependency:** US-1
+**Owning code:** `agent/graph.py::extract_node`, `agent/schemas.py`
+**Tests:** `tests/test_graph_validation.py`, `tests/test_schemas.py`
 
-## 4. Epic 2 — SKU Resolution and Policy Screening
+---
 
-### US-2.1 — Resolve supplier MPNs to internal SKUs
+## US-3 — Detect Incomplete or Malformed Extraction
 
-> **As an Inventory Manager, I want manufacturer part numbers extracted from compliance documents matched against the internal catalog, so that screening is performed against the correct product requirements.**
+**As a** compliance reviewer
+**I want** the system to identify incomplete, uncertain or malformed input
+**So that** the system does not silently produce an apparently compliant result from unreliable data.
 
-**Acceptance criteria**
+### Acceptance Criteria
 
-- Given an extracted manufacturer part number that exists in the cross-reference catalog, when SKU resolution runs, then the corresponding internal SKU is returned.
-- Given no matching SKU, when resolution runs, then the workflow records an explicit unmatched-SKU condition.
-- An unmatched SKU must not be silently treated as a clean compliance result.
+- A missing mandatory field results in an explicit unresolved/needs-review state.
+- A low-confidence mandatory field is identified and named.
+- Corrupted or unreadable input fails gracefully.
+- Password-protected or unsupported input produces a controlled error state.
+- Wrong-schema documents are detected rather than silently processed as the wrong type.
+- Flagged records cannot bypass the review workflow and become compliant automatically.
+- Tests cover at least:
+  - missing field;
+  - low-confidence field;
+  - corrupted file;
+  - wrong-schema document.
 
-### US-2.2 — Apply deterministic screening rules
+### Out of Scope
 
-> **As a compliance analyst, I want the system to evaluate extracted fields against compliance rules and return a decision of APPROVED, FLAGGED, or REJECTED so that I can determine the appropriate compliance outcome.**
+- Reviewer interface and decision workflow → US-4
+- Changes to the underlying compliance rule logic
 
-**Acceptance criteria**
+**Story points:** 3
+**Dependency:** US-2
+**Owning code:** `agent/graph.py::validate_fields_node`, `agent/graph.py::route_after_validation`
+**Tests:** `tests/test_graph_validation.py`, `tests/test_graph_routing.py`
 
-- Given valid structured extraction output, when the rule engine runs, then it returns `APPROVED`, `FLAGGED`, or `REJECTED` plus a priority/severity score.
-- The rule engine applies the defined policy thresholds consistently.
-- Missing or non-applicable values do not cause unhandled exceptions.
-- The LLM may extract or reconcile evidence but must not invent the final policy status.
+---
 
-## 5. Epic 3 — Human Review and Supplier Gap Notice
+## US-4 — Route and Resolve Human Review
 
-### US-3.1 — Human-in-the-loop review
+**As a** compliance reviewer
+**I want** uncertain records routed to a review queue with evidence and explanations
+**So that** I can make an informed final decision.
 
-> **As a Compliance Manager, I want flagged or ambiguous cases routed for human review, so that uncertain evidence is not converted into an unsafe automated decision.**
+### Acceptance Criteria
 
-**Acceptance criteria**
+- A `needs_review` record appears in the reviewer queue without requiring manual re-import.
+- The reviewer sees:
+  - flagged field;
+  - reason for flag;
+  - confidence;
+  - extracted value;
+  - source evidence.
+- Reviewer can approve, correct or reject the record where applicable.
+- Reviewer corrections preserve the original AI extraction.
+- Reviewer action records reviewer ID and timestamp.
+- A human override records the original system result and reason for the override.
+- No flagged record can silently default to compliant.
+- Records that pass the deterministic rule engine are clearly distinguished from records requiring human sign-off.
 
-- Given unresolved extraction ambiguity, when the workflow finishes, then the document is marked for human review with a reason.
-- Given a `FLAGGED` or `REJECTED` screening result, the reviewer can see the triggered rules and extracted evidence.
-- The workflow does not present an unresolved case as confidently compliant.
+### Out of Scope
 
-### US-3.2 — Generate a supplier gap notice
+- Classification → US-1
+- Field extraction → US-2
+- Failure detection → US-3
+- Redesign of the deterministic compliance rules
 
-> **As a Procurement Specialist, I want a pre-filled Supplier Gap Notice for failed documents, so that I can request corrective documentation from a supplier quickly and consistently.**
+**Story points:** 5
+**Dependency:** US-3
+**Owning code:** `agent/graph.py::flag_for_human_review_node`; `agent/gap_notice.py` (`generate_supplier_gap_notice`, `create_gap_notice_record`, `approve_gap_notice_for_sending`, `send_gap_notice`); `agent/gap_notice_store.py`; `agent/server.py` (`PATCH /api/logs/{record_id}/review`, `POST /api/gap-notice`, `POST /api/gap-notice/{notice_id}/approve`, `POST /api/gap-notice/{notice_id}/send`)
+**Tests:** `tests/test_graph_rules.py`, `tests/test_gap_notice.py`
 
-**Acceptance criteria**
+---
 
-- Given a `FLAGGED` or `REJECTED` result, when the Gap Notice step runs, then it identifies the supplier, document, failed rules, and required corrective action.
-- The notice must use the actual rule-engine findings rather than inventing failures.
-- The reviewer can inspect/edit the notice before sending it.
+# Enabler Stories
 
-### US-3.3 — Audit Copilot Chat
+## EN-01 — Pilot Data Readiness
 
-> **As a Compliance Reviewer, I want to ask questions about a specific audit and its findings, so that I can understand the evidence and investigate compliance issues without manually navigating across documents and results.**
+**Goal:** Establish whether the selected pilot category contains sufficient, usable supplier documentation.
 
-**Acceptance criteria**
+### Acceptance Criteria
 
-* Given a selected audit, the reviewer can open Copilot Chat in the context of that audit.
-* The Copilot can answer questions using the selected audit's findings and available evidence.
-* Given a selected finding, the Copilot can explain the finding and identify the relevant evidence.
-* The Copilot does not change or override the deterministic rule-engine result.
-* When the available audit evidence is insufficient, the Copilot explicitly states that the evidence is insufficient.
-* The Copilot does not use information from unrelated audits.
-* The reviewer remains responsible for the final compliance decision.
+- Supplier/document inventory is completed.
+- Completeness and currency of documentation are measured.
+- Missing or outdated documentation is quantified.
+- Data-quality risks are documented.
+- If data quality is below the agreed threshold, capacity and scope are re-estimated before development continues.
 
-## 6. Epic 4 — User Interface and Reporting
+**Story points:** 3
+**Sprint:** 1
+**Owning code:** none — data/process audit, not a pipeline component. Output is the pilot data-quality report, not a module.
 
-### US-4.1 — Upload and inspect a document
+---
 
-> **As a Compliance Reviewer, I want a simple interface to upload a PDF and inspect its extraction and screening result, so that I can use the system without interacting directly with the code.**
+## EN-02 — Read-Only ERP Integration
 
-**Acceptance criteria**
+**Goal:** Allow the system to read the relevant pilot-category records without write access.
 
-- The UI accepts a compliance PDF.
-- The UI displays extraction results, screening status, priority score, and flagged issues.
-- The UI clearly indicates when human review is required.
-- The UI provides access to the generated Gap Notice when applicable.
+### Acceptance Criteria
 
-### US-4.2 — Feed results to Tableau
+- Connector accesses only agreed pilot-category data.
+- No write operation is available.
+- Authentication and credentials follow the approved security process.
+- Integration errors are handled explicitly.
+- Retrieved records can be linked to the corresponding document/run ID.
 
-> **As a Compliance Manager, I want audited structured results exported for Tableau, so that I can monitor supplier and product compliance at portfolio level.**
+**Story points:** 3
+**Sprint:** 5
+**Owning code:** not yet built — no ERP connector exists in the current repo. Left explicitly unfilled rather than omitted, since it's a genuine gap, not an oversight.
 
-**Acceptance criteria**
+---
 
-- The pipeline exports a stable tabular schema.
-- Synthetic and real-world datasets can remain distinguishable.
-- New test data can be added without overwriting the existing Round 1 benchmark outputs.
+## EN-03 — Reviewer Calibration
 
-## 7. Business Baseline
+**Goal:** Establish consistent human-review decisions.
 
-The current cost analysis uses assumptions rather than measured client operating data. The working baseline is approximately 30 minutes of human review per complex document at an illustrative $50/hour internal labor rate, or about $25/document. LangSmith measurements in the current evaluation set indicate approximately $0.0004 AI inference cost per certificate. These figures should be labeled as assumptions/observations and validated with real operating data before being presented as a client ROI claim.
+### Acceptance Criteria
 
-The immediate objective is therefore to **measure review-time reduction during the pilot**, rather than claim a guaranteed ROI percentage.
+- Review guidance is provided to reviewers.
+- Two reviewers independently assess an agreed sample of flagged records.
+- Agreement rate is recorded.
+- Disagreements are analysed and categorised.
+- Calibration issues are documented separately from software defects.
+
+**Story points:** 2
+**Sprint:** 5
+**Owning code:** none — human-process activity, measured via the `ReviewStatus`/`Reviewer` fields already in `agent/db.py`'s `audit_ledger` table, surfaced through `PATCH /api/logs/{record_id}/review`.
+
+---
+
+## EN-04 — Security Review
+
+**Goal:** Confirm that security controls are sufficient for the limited pilot.
+
+### Acceptance Criteria
+
+- Access control reviewed.
+- Credential/secrets management reviewed.
+- Data storage reviewed.
+- Observability/logging reviewed.
+- Security findings documented.
+- Required security actions have owners and deadlines.
+- Security sign-off is recorded before the live pilot.
+
+**Story points:** 3
+**Sprint:** 6
+**Owning code:** cross-cutting — covers `DATABASE_URL` / `TELEGRAM_BOT_TOKEN` / `OPENAI_API_KEY` handling in `.env` (never committed, per `.gitignore`) and dashboard role-restriction. Role-restriction is **not yet implemented** — `agent/server.py` currently has no auth layer. Named here explicitly as the Sprint 6 gap to close, not assumed done.
+
+---
+
+## EN-05 — Procurement and Process Alignment
+
+**Goal:** Confirm where AI output fits within the existing compliance approval process.
+
+### Acceptance Criteria
+
+- Existing decision authority is documented.
+- Human approval step is mapped to the existing process.
+- AI does not introduce an unauthorised decision-maker.
+- Procurement requirements are documented.
+- Outstanding commercial/process dependencies are recorded.
+
+**Story points:** 2
+**Sprint:** 6
+**Owning code:** none — process/organisational deliverable, documented as a decision memo, not implemented in the repo.
